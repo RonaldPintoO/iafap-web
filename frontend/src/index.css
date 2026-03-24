@@ -1,0 +1,3228 @@
+:root{
+  --primary: #b61c1c;
+  --text: #222;
+  --muted: #777;
+  --divider: #e7e7e7;
+  --bg: #f4f4f4;
+
+  --drawer-w: 330px;
+  --topbar-h: 56px;
+  --radius: 10px;
+}
+
+*{ box-sizing: border-box; }
+html, body, #root{
+  height: 100%;
+}
+body{
+  margin:0;
+  font-family: Roboto, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.material-symbols-outlined{
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.topbar{
+  height: var(--topbar-h);
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 0 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--divider);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar__title{
+  font-weight: 500;
+  color: #333;
+}
+
+/* En móvil oculto el texto del topbar (evita duplicar con el logo del drawer) */
+.topbar__title--mobile-hide{
+  display: none;
+}
+
+.icon-btn{
+  appearance:none;
+  border:none;
+  background: transparent;
+  padding: 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.icon-btn:active{ background: #f1f1f1; }
+
+.main{
+  padding: 16px;
+  margin-left: 0;
+}
+
+.drawer{
+  width: var(--drawer-w);
+  background: #fff;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-right: 1px solid var(--divider);
+  z-index: 30;
+
+  transform: translateX(-102%);
+  transition: transform .22s ease;
+  overflow-y: auto;
+}
+
+.drawer.is-open{
+  transform: translateX(0);
+}
+
+.drawer__header{
+  padding: 18px 16px 12px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.brand--logo-only{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 4px;
+}
+
+.brand__logo-full{
+  max-width: 100%;
+  height: auto;
+  max-height: 56px;
+  object-fit: contain;
+}
+
+.logo-box{
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(182,28,28,.95), rgba(182,28,28,.25));
+}
+
+.brand__name{
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: #b23;
+  font-size: 20px;
+  line-height: 1.1;
+}
+.brand__sub{
+  font-weight: 500;
+  color: #666;
+  margin-top: 2px;
+  letter-spacing: 2px;
+}
+
+.meta{
+  display:flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.menu{
+  padding: 6px 0;
+}
+
+.menu__item{
+  display:flex;
+  align-items:center;
+  gap: 14px;
+  padding: 14px 18px;
+  text-decoration:none;
+  color: #222;
+  border-bottom: 1px solid var(--divider);
+}
+
+.menu__icon{
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.menu__label{
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.menu__item:hover{
+  background: #fafafa;
+}
+
+.menu__item.is-active{
+  position: relative;
+}
+.menu__item.is-active::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width: 4px;
+  background: var(--primary);
+}
+
+.overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 25;
+}
+
+.card{
+  background:#fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+@media (min-width: 1024px){
+  .topbar{ display:none; }
+
+  .drawer{ transform: translateX(0); }
+
+  .main{
+    margin-left: var(--drawer-w);
+    padding: 24px;
+  }
+
+  .overlay{ display:none !important; }
+}
+
+/* ====== Actividad screen (responsive) ====== */
+.activity-page{
+  min-height: max(100%, 520px);
+  background: #fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Tabs */
+.activity-tabs{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  border-bottom: 1px solid var(--divider);
+}
+
+.activity-tab{
+  background: #fff;
+  border: 0;
+  padding: clamp(12px, 3.6vw, 16px) clamp(10px, 3vw, 14px);
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--primary);
+  cursor: pointer;
+  position: relative;
+  font-size: clamp(14px, 3.8vw, 20px);
+}
+
+.tab-divider{
+  width: 1px;
+  background: var(--divider);
+}
+
+.activity-tab.is-active::after{
+  content:"";
+  position:absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(4px, 1.4vw, 6px);
+  background: var(--primary);
+}
+
+/* Form */
+.activity-form{
+  padding: clamp(14px, 4vw, 18px);
+  padding-bottom: clamp(8px, 2.5vw, 10px);
+}
+
+.activity-grid-head{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(12px, 4.5vw, 28px);
+  margin-bottom: clamp(8px, 2.5vw, 10px);
+  text-align: center; 
+}
+
+.field-head{
+  font-size: clamp(14px, 4vw, 20px);
+  font-weight: 400;
+  color: #777;
+  text-align: center;
+}
+
+.field-sub{
+  font-size: clamp(12px, 3.6vw, 18px);
+  color: #999;
+  margin-top: clamp(4px, 1.5vw, 6px);
+  text-align: center;
+}
+
+/* Rows */
+.activity-grid-row{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(12px, 4.5vw, 28px);
+  padding: clamp(10px, 3.2vw, 14px) 0;
+}
+
+.field input{
+  width: 100%;
+  border: 0;
+  outline: none;
+  font-size: clamp(16px, 4.6vw, 22px);
+  padding: clamp(4px, 1.6vw, 6px) 0;
+  background: transparent;
+}
+
+/* Underline */
+.underline{
+  height: 2px;
+  background: #777;
+  margin-top: clamp(4px, 1.6vw, 6px);
+}
+
+.underline.is-error{
+  background: #d32f2f;
+}
+
+/* Actions */
+.activity-actions{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(12px, 3.8vw, 18px);
+  padding: clamp(14px, 4vw, 18px);
+  padding-top: clamp(8px, 2.6vw, 10px);
+  justify-content: center;
+}
+
+/* Buttons (global .btn, pero ajustado a responsive sin romper look) */
+.btn{
+  height: clamp(48px, 14vw, 56px);
+  border-radius: 4px;
+  border: 1px solid var(--divider);
+  background: #e0e0e0;
+  color: #333;
+  font-size: clamp(14px, 4vw, 20px);
+  cursor: pointer;
+}
+
+.btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.btn-primary{
+  background: #d9d9d9;
+}
+
+/* Resultado */
+.activity-result{
+  padding: clamp(14px, 4vw, 18px);
+}
+
+.activity-result h2{
+  margin: 0 0 10px;
+  font-size: clamp(16px, 4.6vw, 22px);
+}
+
+.activity-result p{
+  margin: 0;
+  font-size: clamp(14px, 4vw, 18px);
+  color: #666;
+}
+
+/* Extra: pantallas muy chicas */
+@media (max-width: 380px){
+  .activity-form{ padding: 12px; }
+  .activity-actions{ padding: 12px; }
+}
+
+/* ====== Sólo Cédula screen ====== */
+.solo-page{
+  min-height: max(100%, 520px);
+  background: #fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.solo-tabs{
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: stretch;
+  border-bottom: 1px solid var(--divider);
+}
+
+.solo-tab{
+  background: #fff;
+  border: 0;
+  padding: 16px 18px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--primary);
+  cursor: default;
+  position: relative;
+}
+
+.solo-tab.is-active::after{
+  content:"";
+  position:absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--primary);
+}
+
+.solo-tab-spacer{
+  background: #fff;
+}
+
+.solo-content{
+  min-height: 440px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  gap: 22px;
+}
+
+.solo-input-wrap{
+  width: min(520px, 60%);
+}
+
+.solo-input-wrap input{
+  width: 100%;
+  border: 0;
+  outline: none;
+  font-size: 20px;
+  padding: 10px 0;
+  background: transparent;
+  text-align: center;
+}
+
+.solo-underline{
+  height: 2px;
+  background: #777;
+  margin-top: 8px;
+}
+
+.solo-btn{
+  width: min(420px, 60%);
+  height: 70px;
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  background: #d9d9d9;
+  font-size: 20px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+/* ====== Analisis Screen ====== */
+
+.analysis-page{
+  min-height: max(100%, 520px);
+  background:#fff;
+  border: 1px solid var(--divider);
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.analysis-tabs{
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  align-items: stretch;
+  border-bottom: 1px solid #e7e7e7;
+}
+
+.analysis-tabs__item{
+  display: contents;
+}
+
+.analysis-tab{
+  background: #fff;
+  border: 0;
+  padding: 16px 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #b61c1c;
+  cursor: pointer;
+  position: relative;
+}
+
+.analysis-tab__divider{
+  background: #e7e7e7;
+}
+
+.analysis-tab__active-bar{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: #b61c1c;
+}
+
+.analysis-body{
+  padding: 18px;
+}
+
+.analysis-body__title{
+  text-align: center;
+  color: #9b9b9b;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  margin: 18px 0 18px;
+}
+
+.analysis-empty{
+  border: 1px dashed #e7e7e7;
+  border-radius: 8px;
+  padding: 18px;
+  text-align: center;
+  color: #9b9b9b;
+}
+
+.analysis-list{
+  display: grid;
+  gap: 12px;
+}
+
+.analysis-card{
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
+}
+
+.analysis-card__title{
+  font-weight: 700;
+  color: #333;
+}
+
+.analysis-card__detail{
+  color: #777;
+  margin-top: 6px;
+}
+/* ====== Pages (placeholders) ====== */
+.page-shell{
+  background: #fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 520px;
+}
+
+.page-title{
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--divider);
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: .5px;
+  font-size: 18px;
+}
+
+.page-body{
+  padding: 18px;
+}
+
+.page-card{
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+
+/* ====== Afiliaciones screen ====== */
+.afi-page{
+  min-height: max(100%, 520px);
+  background:#fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  overflow:hidden;
+  position: relative;
+}
+
+.afi-tabs{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: stretch;
+  border-bottom: 1px solid var(--divider);
+}
+
+.afi-tab{
+  background:#fff;
+  border:0;
+  padding: 14px 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--primary);
+  cursor: pointer;
+  position: relative;
+}
+
+.afi-tab-divider{
+  width: 1px;
+  background: var(--divider);
+}
+
+.afi-tab.is-active::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height: 6px;
+  background: var(--primary);
+}
+
+/* PERSONAS toolbar */
+.afi-personas{
+  padding: 14px;
+  position: relative;
+  min-height: 460px;
+}
+
+.afi-toolbar{
+  display: grid;
+  grid-template-columns: 1fr 64px 64px;
+  gap: 14px;
+  align-items: center;
+}
+
+.afi-select{
+  height: 64px;
+  border: 1px solid var(--divider);
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-select__value{
+  font-size: clamp(16px, 4.6vw, 22px);
+  color: #333;
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-select__chev{
+  font-size: clamp(18px, 5vw, 24px);
+  color: #777;
+}
+
+.afi-ag-actions{
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  display: flex;
+  gap: 12px;
+}
+
+.afi-icon-btn{
+  height: 64px;
+  width: 64px;
+  border: 1px solid var(--divider);
+  background:#fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  cursor: pointer;
+  display:grid;
+  place-items:center;
+}
+
+.afi-icon-btn .material-symbols-outlined{
+  font-size: 30px;
+  color: var(--primary);
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-count{
+  text-align:center;
+  margin: 18px 0 10px;
+  font-size: clamp(14px, 4.2vw, 20px);
+  color: #888;
+}
+
+.afi-list{
+  margin-top: 8px;
+}
+
+.afi-empty{
+  padding: 16px;
+  border: 1px dashed var(--divider);
+  border-radius: 8px;
+  color: #888;
+}
+
+/* =========================
+   Dropdown superior (toolbar) - menú fixed
+   (se usa con className en JSX)
+   ========================= */
+.afi-top-menu{
+  background: #fff;
+  border: 1px solid var(--divider);
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+  border-radius: 6px;
+  overflow: auto;
+  z-index: 9999;
+}
+
+.afi-top-item{
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: #fff;
+  cursor: pointer;
+
+  padding: clamp(12px, 3.8vw, 16px) clamp(14px, 4vw, 18px);
+  font-size: clamp(16px, 4.6vw, 22px);
+}
+
+.afi-top-item:hover{
+  background: #f6f6f6;
+}
+
+/* MAPA */
+.afi-mapa{
+  padding: 14px;
+}
+.afi-map-box{
+  position: relative;
+  height: 560px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  overflow:hidden;
+  background: #f2f2f2;
+}
+
+.afi-map-control{
+  position:absolute;
+  width: 54px;
+  height: 54px;
+  background:#fff;
+  border: 1px solid var(--divider);
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+  display:grid;
+  place-items:center;
+}
+.afi-map-control--top{
+  right: 14px;
+  top: 14px;
+}
+
+.afi-map-control-divider{
+  width: 70%;
+  height: 1px;
+  background: var(--divider);
+}
+
+/* ✅ Toast del mapa (mensaje ubicación) */
+.afi-map-toast{
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+
+  background: #fff;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
+
+  padding: clamp(10px, 3vw, 12px) clamp(12px, 3.6vw, 14px);
+  font-size: clamp(13px, 3.6vw, 16px);
+  color: #333;
+}
+
+/* AGENDADOS */
+.afi-agendados{
+  position: relative;
+  min-height: 460px;
+  padding: 14px;
+  padding-top: 96px
+}
+.afi-ag-empty{
+  padding: 16px;
+  border: 1px dashed var(--divider);
+  border-radius: 8px;
+  color: #888;
+}
+.afi-filters-float{
+  position:absolute;
+  right: 18px;
+  top: 18px;
+}
+
+/* Modal filtros */
+.afi-modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index: 50;
+  padding: 18px;
+}
+
+.afi-modal-backdrop.is-open{
+  display:flex;
+}
+
+.afi-modal{
+  width: min(720px, 92vw);
+  background:#fff;
+  border-radius: 4px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  overflow:hidden;
+}
+
+.afi-modal-body{
+  padding: 22px 22px 10px;
+}
+
+.afi-modal-row{
+  display:grid;
+  grid-template-columns: 170px 1fr;
+  gap: 18px;
+  align-items:center;
+  padding: 14px 0;
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-modal-label{
+  font-size: clamp(14px, 4.2vw, 20px);
+  color: #7d7d7d;
+}
+
+.afi-modal-field{
+  width: 100%;
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-modal-input{
+  width: 100%;
+  border: 0;
+  outline: none;
+  font-size: clamp(14px, 4.2vw, 20px);
+  padding: 6px 0;
+}
+
+.afi-modal-underline{
+  height: 2px;
+  background: #777;
+  margin-top: 8px;
+}
+
+.afi-modal-select{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: clamp(14px, 4.2vw, 20px);
+  color: #555;
+}
+
+.afi-modal-actions{
+  display:flex;
+  justify-content: space-between;
+  padding: 18px 22px;
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-modal-action{
+  border: 0;
+  background: transparent;
+  font-size: clamp(14px, 4.2vw, 20px);
+  font-weight: 700;
+  color: #2e9f57; /* similar al verde de Android */
+  cursor: pointer;
+}
+
+/* ====== Dropdown custom (Modal filtros) ====== */
+.afi-modal{
+  /* IMPORTANTE: si está en overflow:hidden te recorta el dropdown */
+  overflow: visible;
+}
+
+.afi-dd{
+  position: relative;
+  width: 100%;
+}
+
+.afi-dd__control{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 20px;
+  color: #555;
+}
+
+.afi-dd__control:focus{
+  outline: none;
+}
+
+.afi-dd__value{
+  display: inline-block;
+}
+
+.afi-dd__chev{
+  color: #666;
+  font-size: 20px;
+}
+
+/* menú */
+.afi-dd__menu{
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--divider);
+  box-shadow: 0 10px 20px rgba(0,0,0,.18);
+  border-radius: 6px;
+  overflow: auto;
+  z-index: 999; /* encima del modal */
+}
+
+/* abajo / arriba */
+.afi-dd__menu.is-down{ top: calc(100% + 6px); }
+.afi-dd__menu.is-up{ bottom: calc(100% + 6px); }
+
+/* items */
+.afi-dd__item{
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 12px 14px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.afi-dd__item:hover{
+  background: #f5f5f5;
+}
+
+.afi-dd__item.is-selected{
+  font-weight: 700;
+}
+
+/* ====== Dropdown custom en modal (afi-dd) ====== */
+.afi-dd{
+  position: relative;
+  width: 100%;
+}
+
+.afi-dd__btn{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-dd__value{
+  font-size: clamp(14px, 4.2vw, 20px);
+  color: #555;
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-dd__chev{
+  font-size: clamp(14px, 4.2vw, 20px);
+  color: #666;
+}
+
+/* Menú */
+.afi-dd__menu{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border: 1px solid var(--divider);
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+  border-radius: 4px;
+  overflow: auto;
+  z-index: 9999;
+
+  /* oculto por defecto */
+  display: none;
+}
+
+.afi-dd.is-open .afi-dd__menu{
+  display: block;
+}
+
+/* Si abre hacia arriba */
+.afi-dd.is-up .afi-dd__menu{
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+/* ✅ responsive (antes 20px fijo) */
+.afi-dd__item{
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: #fff;
+  padding: 14px 14px;
+  font-size: clamp(14px, 4.2vw, 20px);
+  cursor: pointer;
+}
+
+.afi-dd__item:hover{
+  background: #f6f6f6;
+}
+
+.afi-dd__item.is-selected{
+  font-weight: 700;
+}
+
+/* =========================
+   FIX dropdown en MOBILE
+   (Dpto. / Ley / etc.)
+   ========================= */
+
+/* El menú del dropdown: que no quede angosto en móvil */
+.afi-dd__menu{
+  /* en desktop puede seguir tomando el ancho del control,
+     pero en mobile le damos un mínimo para que entren textos */
+  min-width: 240px;
+  max-width: calc(100vw - 48px); /* evita que se salga de la pantalla */
+}
+
+/* Items: permitir salto de línea si hiciera falta */
+.afi-dd__item{
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* En pantallas chicas: achicamos el label para agrandar el select */
+@media (max-width: 520px){
+  .afi-modal-row{
+    grid-template-columns: 110px 1fr; /* antes 170px */
+    gap: 14px;
+  }
+
+  /* Opcional: un pelín menos de letra para que respire */
+  .afi-modal-label{
+    font-size: clamp(14px, 4.2vw, 18px);
+  }
+}
+
+
+/* Que el menú SIEMPRE quede arriba de Leaflet */
+.topbar { z-index: 6000; }          /* opcional, pero ayuda */
+.drawer { z-index: 5000; }
+.overlay { z-index: 4500; }
+
+/* Asegurarnos que el mapa no cree un stacking raro por encima */
+.afi-map-box { position: relative; z-index: 0; }
+.leaflet-container { position: relative; z-index: 0; }
+
+/* ===== Topbar móvil con logo ===== */
+.topbar--mobile-logo{
+  gap: 12px;
+}
+
+.topbar__menu{
+  /* opcional: deja el botón más “cuadrado” como Android */
+  border: 1px solid var(--divider);
+  background: #fff;
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+}
+
+.topbar__menu .material-symbols-outlined{
+  font-size: 30px;
+  color: var(--primary);
+}
+
+.topbar__brand{
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.topbar__logo{
+  height: 40px;      /* ajustá si querés más grande */
+  width: auto;
+  object-fit: contain;
+}
+
+/* =========================
+   MOBILE: Drawer debajo del topbar + Id/Versión visible
+   (ÚNICO bloque mobile para drawer/header)
+   ========================= */
+@media (max-width: 1023px){
+
+  /* drawer debajo del topbar */
+  .drawer{
+    top: var(--topbar-h);
+    height: calc(100vh - var(--topbar-h));
+    z-index: 5000;
+  }
+
+  /* overlay no tapa el topbar */
+  .overlay{
+    top: var(--topbar-h);
+  }
+
+  /* ocultar SOLO el logo del drawer (logo ya está en topbar) */
+  .drawer__header .brand--logo-only{
+    display: none;
+  }
+
+  /* header visible con Id/Versión */
+  .drawer__header{
+    display: block;
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .drawer__header .meta{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* el menú arranca pegadito al header */
+  .menu{
+    padding-top: 0;
+  }
+}
+
+/* =========================
+   Modal: Agregar Persona (PERSONAS +)
+   ========================= */
+.afi-add-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 18px;
+}
+
+.afi-add-backdrop.is-open{
+  display: flex;
+}
+
+.afi-add{
+  width: min(720px, 92vw);
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  overflow: hidden;
+}
+
+.afi-add-body{
+  padding: 28px 26px 8px;
+}
+
+.afi-add-row{
+  padding: 18px 0;
+}
+
+.afi-add-input{
+  width: 100%;
+  border: 0;
+  outline: none;
+  font-size: 20px;
+  color: #777;
+  background: transparent;
+}
+
+.afi-add-input::placeholder{
+  color: #999;
+}
+
+.afi-add-underline{
+  height: 2px;
+  background: #777;
+  margin-top: 10px;
+}
+
+.afi-add-underline.is-error{
+  background: #d32f2f;
+}
+
+.afi-add-input.is-error{
+  color: #777; /* mantenemos look, solo marca la línea */
+}
+
+.afi-add-actions{
+  padding: 18px 26px 26px;
+  display: grid;
+  gap: 18px;
+}
+
+.afi-add-btn{
+  height: 78px;
+  border-radius: 4px;
+  border: 1px solid var(--divider);
+  background: #d9d9d9;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.afi-add-btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* En móviles chicos, bajamos un toque la tipografía */
+@media (max-width: 520px){
+  .afi-add-input{
+    font-size: 20px;
+  }
+  .afi-add-btn{
+    height: 72px;
+    font-size: 20px;
+  }
+}
+
+/* En móvil: el main ocupa el alto restante debajo del topbar */
+@media (max-width: 1023px){
+  .main{
+    height: calc(100vh - var(--topbar-h));
+    overflow: auto;
+  }
+}
+
+/* En desktop: el main ocupa todo el alto (no hay topbar) */
+@media (min-width: 1024px){
+  .main{
+    height: 100vh;
+    overflow: auto;
+  }
+}
+
+/* =========================
+   FORMULARIOS
+   ========================= */
+
+.forms-page{
+  min-height: max(100%, 520px);
+  background: #fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Toolbar (2 selects) */
+.forms-toolbar{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--divider);
+}
+
+/* Select button */
+.forms-select-wrap{ position: relative; }
+
+.forms-select{
+  width: 100%;
+  height: clamp(64px, 18vw, 84px);
+  border: 0;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  padding: 12px 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.10);
+  border: 1px solid var(--divider);
+  cursor: pointer;
+  text-align: left;
+}
+
+.forms-select__label{
+  grid-column: 1 / 2;
+  grid-row: 1;
+  font-size: clamp(18px, 5.2vw, 34px);
+  color: #333;
+  line-height: 1.05;
+}
+
+.forms-select__value{
+  grid-column: 1 / 2;
+  grid-row: 2;
+  font-size: clamp(14px, 3.8vw, 24px);
+  color: #666;
+}
+
+.forms-select__chev{
+  grid-column: 2 / 3;
+  grid-row: 1 / span 2;
+  font-size: clamp(22px, 6vw, 30px);
+  color: #666;
+  justify-self: end;
+}
+
+/* Menú dropdown (lo posicionás desde JS/inline, acá solo look & sizing) */
+.forms-select-menu{
+  background: #fff;
+  border: 1px solid var(--divider);
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+  border-radius: 6px;
+  overflow: auto;
+  z-index: 9999;
+
+  /* 👇 para mobile */
+  max-height: min(52vh, 420px);
+  min-width: 240px;
+}
+
+.forms-select-item{
+  width: 100%;
+  border: 0;
+  background: #fff;
+  text-align: left;
+  padding: 14px 16px;
+  font-size: clamp(18px, 5.2vw, 28px);
+  cursor: pointer;
+}
+
+.forms-select-item:hover{ background: #f6f6f6; }
+.forms-select-item.is-selected{ font-weight: 700; }
+
+/* Lista */
+.forms-list{
+  padding: 0;
+  padding-bottom: 110px; /* espacio para los botones flotantes */
+}
+
+.forms-empty{
+  padding: 20px;
+  color: #888;
+}
+
+.forms-item{
+  display: grid;
+  grid-template-columns: clamp(40px, 12vw, 86px) 1fr;
+  border-bottom: 1px solid #efefef;
+  background: #fff;
+}
+
+.forms-item__bar{
+  border-right: 1px solid #2b2b2b;
+}
+
+.forms-item__body{
+  padding: 18px 16px;
+}
+
+.forms-item__top{
+  display: grid;
+  grid-template-columns: minmax(120px, 150px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.forms-item__id{
+  font-size: clamp(22px, 6vw, 40px);
+  font-weight: 600;
+  color: #222;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.forms-item__line{
+  font-size: clamp(16px, 4.5vw, 26px);
+  color: #222;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.forms-item__ci{
+  font-weight: 500;
+}
+
+.forms-item__bottom{
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(120px, 150px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.forms-item__dt,
+.forms-item__estado{
+  font-size: clamp(14px, 3.8vw, 22px);
+  color: #777;
+  line-height: 1.25;
+}
+
+/* Botón info abajo-izquierda */
+.forms-info-btn{
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  width: clamp(44px, 12vw, 64px);
+  height: clamp(44px, 12vw, 64px);
+  border-radius: 8px;
+  border: 1px solid var(--divider);
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
+  display: grid;
+  place-items: center;
+  z-index: 80;
+  cursor: pointer;
+}
+.forms-info-btn .material-symbols-outlined{
+  font-size: clamp(22px, 6vw, 32px);
+  color: #d32f2f;
+}
+
+/* =========================
+   Modal info (leyenda colores)
+   ========================= */
+
+/* Backdrop */
+.forms-info-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 90;
+}
+.forms-info-backdrop.is-open{ display: flex; }
+
+/* Caja modal */
+.forms-info-modal{
+  width: min(720px, 92vw);
+  max-height: min(82vh, 720px);
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Body scrolleable */
+.forms-info-body{
+  padding: 18px 18px 10px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Filas */
+.forms-info-row{
+  display: grid;
+  grid-template-columns: clamp(40px, 12vw, 64px) 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 4px;
+}
+
+/* Cuadrado de color */
+.forms-info-color{
+  width: clamp(34px, 10vw, 54px);
+  height: clamp(54px, 14vw, 84px);
+  border: 1px solid #e7e7e7;
+  border-radius: 2px;
+}
+
+/* "Vacío" */
+.forms-info-color.is-empty{
+  background: #fff;
+  border: 2px solid #111;
+}
+
+/* Texto (responsive + wrap prolijo) */
+.forms-info-text{
+  font-size: clamp(16px, 4.8vw, 28px);
+  color: #777;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Footer fijo */
+.forms-info-actions{
+  padding: 14px 18px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #eee;
+}
+
+.forms-info-action{
+  border: 0;
+  background: transparent;
+  font-size: clamp(16px, 4.8vw, 24px);
+  font-weight: 800;
+  color: #2e9f57;
+  cursor: pointer;
+}
+
+/* Ajuste extra para pantallas muy chicas */
+@media (max-width: 380px){
+  .forms-toolbar{ gap: 10px; padding: 12px; }
+  .forms-select{ padding: 10px 10px; }
+  .forms-info-modal{ width: 94vw; }
+  .forms-info-body{ padding: 14px 14px 8px; }
+  .forms-info-row{ gap: 12px; }
+}
+/* Afiliaciones */
+.afi-fab{
+  all: unset;
+}
+.afi-fab{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: clamp(56px, 16vw, 82px);
+  height: clamp(56px, 16vw, 82px);
+  border-radius: 999px;
+  border: 0;
+  background: #d9534f;
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 80;
+}
+.afi-fab .material-symbols-outlined{
+  font-size: clamp(28px, 7vw, 44px);
+  color: #fff;
+}
+
+/* Formularios */
+.forms-fab{
+  all: unset;
+}
+.forms-fab{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: clamp(56px, 16vw, 82px);
+  height: clamp(56px, 16vw, 82px);
+  border-radius: 999px;
+  border: 0;
+  background: #d9534f;
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 80;
+}
+.forms-fab .material-symbols-outlined{
+  font-size: clamp(28px, 7vw, 44px);
+  color: #fff;
+}
+
+/* =========================
+   FORMULARIOS - MODAL AGREGAR (+)
+   (clases: forms-add-*)
+   ========================= */
+
+.forms-add-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 95;
+  padding: 18px;
+}
+.forms-add-backdrop.is-open{ display: flex; }
+
+.forms-add-modal{
+  width: min(920px, 94vw);
+  height: min(820px, 88vh);
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabs (scroll horizontal en mobile) */
+.forms-add-tabs{
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--divider);
+  background: #fff;
+}
+
+.forms-add-tab{
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  padding: clamp(12px, 3.6vw, 16px) clamp(14px, 4vw, 18px);
+  font-weight: 500;
+  letter-spacing: .3px;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: clamp(13px, 3.6vw, 16px);
+  position: relative;
+  white-space: nowrap;
+}
+
+.forms-add-tab.is-active::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height: 6px;
+  background: var(--primary);
+}
+
+/* Body scrolleable */
+.forms-add-body{
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Placeholder para pestañas pendientes */
+.forms-add-placeholder{
+  color: #777;
+  border: 1px dashed var(--divider);
+  border-radius: 10px;
+  padding: 18px;
+}
+
+/* Footer acciones */
+.forms-add-actions{
+  border-top: 1px solid var(--divider);
+  padding: 12px 14px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  background: #fff;
+}
+
+.forms-add-action{
+  height: clamp(44px, 12vw, 56px);
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--divider);
+  background: #fff;
+  cursor: pointer;
+  font-size: clamp(14px, 4vw, 18px);
+  font-weight: 700;
+  color: #333;
+}
+
+.forms-add-action.is-primary{
+  background: #d9d9d9;
+}
+
+/* =========================
+   DATOS: grid + campos (forms-datos*)
+   ========================= */
+
+.forms-datos{
+  display: grid;
+  gap: 18px;
+}
+
+/* filas */
+.forms-datos-row{
+  display: grid;
+  gap: 16px;
+}
+.forms-datos-row.one{ grid-template-columns: 1fr; }
+.forms-datos-row.two{ grid-template-columns: 1fr 1fr; }
+.forms-datos-row.three{ grid-template-columns: 1fr 1fr 1fr; }
+
+@media (max-width: 520px){
+  .forms-datos-row.two{ grid-template-columns: 1fr 1fr; }
+  .forms-datos-row.three{ grid-template-columns: 1fr 1fr; }
+}
+
+/* =========================
+   Campo: label + input/select + underline
+   (forms-field*)
+   ========================= */
+
+.forms-field{
+  display: block;
+  width: 100%;
+}
+
+.forms-field__label{
+  font-size: clamp(14px, 4.2vw, 20px);
+  color: #999;
+  margin-bottom: 6px;
+}
+
+.forms-field__input,
+.forms-field__select{
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: clamp(16px, 4.8vw, 22px);
+  color: #222;
+  padding: 6px 0;
+}
+
+/* Select: que no quede “aplastado” */
+.forms-field__select{
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* underline igual al resto de tu app */
+.forms-field__underline{
+  height: 2px;
+  background: #777;
+  margin-top: 8px;
+}
+
+/* opcional: mejorar tacto en mobile */
+@media (max-width: 520px){
+  .forms-add-body{ padding: 14px; }
+  .forms-add-actions{ justify-content: space-between; }
+}
+
+
+/* =========================
+   CONFIGURACION (Android-like)
+   ========================= */
+
+.cfg-page{
+  background: #fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: max(100%, 520px);
+}
+
+.cfg-title{
+  padding: 18px 18px 10px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  color: var(--primary);
+  font-size: 16px;
+}
+
+.cfg-underline{
+  height: 10px;
+  background: var(--primary);
+  width: 280px;           /* “subrayado” como Android */
+  margin-left: 18px;
+  border-radius: 2px;
+}
+
+.cfg-content{
+  padding: 26px 18px 22px;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cfg-row{
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding-top: 14px;
+}
+
+.cfg-label{
+  color: #9b9b9b;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.cfg-select-wrap{
+  position: relative;
+  width: 100%;
+}
+
+.cfg-select{
+  width: 100%;
+  height: 56px;
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+  color: #111;
+  padding: 0 48px 0 0;   /* más espacio para flecha */
+  outline: none;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  border-bottom: 1px solid #e7e7e7;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfg-select-icon{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 34px;
+  color: #777;
+  pointer-events: none;
+}
+
+.cfg-actions{
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  padding: 28px 0 10px;
+}
+
+.cfg-save{
+  min-width: 160px;
+  height: 44px;
+  border: 1px solid #d7d7d7;
+  background: #e0e0e0;
+  border-radius: 2px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+@media (max-width: 520px){
+  .cfg-row{
+    grid-template-columns: 90px 1fr;
+  }
+  .cfg-label{
+    font-size: 18px;
+  }
+  .cfg-select{
+    font-size: 20px;
+  }
+}
+
+/* Limitar ancho en desktop */
+@media (min-width: 1024px){
+  .cfg-select-wrap{
+    max-width: 420px;   /* ajustá a gusto */
+  }
+}
+
+@media (max-width: 520px){
+  .cfg-select{
+    font-size: 15px;
+  }
+}
+
+/* =========================
+   PROYECTOS (tabs Android-like)
+   ========================= */
+
+.proj-page{
+  min-height: max(100%, 520px);
+  background:#fff;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Tabs superiores */
+
+.proj-tabs{
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--divider);
+  background: #fff;
+}
+
+.proj-tab{
+  flex: 0 0 auto;
+  padding: 16px 22px;
+  border: 0;
+  background: #fff;
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: .5px;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.proj-tab + .proj-tab{
+  border-left: 1px solid var(--divider);
+}
+
+.proj-tab.is-active::after{
+  content:"";
+  position:absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: var(--primary);
+}
+
+.proj-body{
+  padding: 0;
+  min-height: 520px;
+}
+
+.proj-empty{
+  margin: 18px;
+  border: 1px dashed var(--divider);
+  border-radius: 10px;
+  padding: 18px;
+  color: #777;
+}
+
+/* =========================
+   FAB +
+   ========================= */
+
+.proj-fab{
+  all: unset;
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: clamp(56px, 16vw, 82px);
+  height: clamp(56px, 16vw, 82px);
+  border-radius: 999px;
+  border: 0;
+  background: #d9534f;
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 80;
+}
+
+.proj-fab .material-symbols-outlined{
+  font-size: clamp(28px, 7vw, 44px);
+  color: #fff;
+}
+
+/* =========================
+   COMBUSTIBLE
+   ========================= */
+
+.fuel-wrap{
+  position: relative;
+  min-height: 520px;
+}
+
+/* Subtabs */
+
+.fuel-tabs{
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: stretch;
+  border-bottom: 1px solid var(--divider);
+  background: #fff;
+}
+
+.fuel-tab{
+  border: 0;
+  background: #fff;
+  padding: 16px 12px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--primary);
+  cursor: pointer;
+  position: relative;
+}
+
+.fuel-tab-divider{
+  background: var(--divider);
+}
+
+.fuel-tab.is-active::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height: 6px;
+  background: var(--primary);
+}
+
+/* Cuerpo */
+
+.fuel-body{
+  padding: 18px;
+}
+
+.fuel-empty{
+  min-height: 420px;
+}
+
+/* Proyecto select */
+
+.fuel-project{
+  position: relative;
+  margin-top: 6px;
+  margin-bottom: 20px;
+}
+
+.fuel-project__select{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  color: #111;
+  padding: 10px 46px 10px 0;
+  outline: none;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  border-bottom: 1px solid var(--divider);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fuel-project__chev{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 34px;
+  color: #777;
+  pointer-events: none;
+}
+
+/* Formulario */
+
+.fuel-form{
+  display: grid;
+  gap: 22px;
+}
+
+.fuel-field__label{
+  color: #9b9b9b;
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.fuel-field__input{
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #222;
+  padding: 8px 0;
+}
+
+.fuel-field__underline{
+  height: 2px;
+  background: #777;
+  margin-top: 8px;
+}
+
+/* Botón redondo */
+
+.fuel-send-row{
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fuel-send{
+  all: unset;
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: #d9534f;
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.fuel-send .material-symbols-outlined{
+  font-size: 44px;
+  color: #fff;
+}
+
+/* =========================
+   FOTO
+   ========================= */
+
+.fuel-photo{
+  padding: 18px;
+}
+
+.fuel-photo__inner{
+  position: relative;
+  padding-bottom: 120px;
+}
+
+.fuel-photo__box{
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fafafa;
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+}
+
+.fuel-photo__img{
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.fuel-photo__placeholder{
+  color: #999;
+}
+
+.fuel-photo__actions{
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.fuel-photo__btn{
+  height: 54px;
+  border-radius: 6px;
+  border: 1px solid var(--divider);
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.fuel-photo__btn--muted{
+  background: #f3f3f3;
+}
+
+.fuel-send--fab{
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+}
+
+/* =========================
+   ALQUILER / ADELANTOS
+   ========================= */
+
+.rent-list{
+  display: grid;
+  gap: 16px;
+}
+
+.rent-card{
+  background: #f7e7a8;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.rent-card__top{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.rent-card__dates{
+  font-size: 22px;
+  color: #111;
+  line-height: 1.25;
+}
+
+.rent-card__status-pill{
+  align-self: start;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.rent-card__mid{
+  margin-top: 12px;
+  font-size: 22px;
+  color: #111;
+  line-height: 1.25;
+}
+
+.rent-card__actions{
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.rent-btn{
+  height: 54px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 400;
+  color: #333;
+}
+
+.rent-btn--primary{
+  background: #d9534f;
+  color: #fff;
+  border: 0;
+}
+
+/* =========================
+   MODAL
+   ========================= */
+
+.proj-modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 120;
+}
+
+.proj-modal{
+  width: min(720px, 92vw);
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  padding: 24px 22px 18px;
+}
+
+.proj-modal__title{
+  font-size: 32px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 10px;
+}
+
+.proj-modal__body{
+  margin-top: 6px;
+}
+
+.proj-modal__msg{
+  font-size: 22px;
+  color: #333;
+  line-height: 1.25;
+}
+
+.proj-modal__actions{
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.proj-modal__action{
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #2e9f57;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 520px){
+
+  .fuel-project__select{ font-size: 18px; }
+
+  .fuel-field__label{ font-size: 18px; }
+
+  .fuel-field__input{ font-size: 16px; }
+
+  .proj-modal__title{ font-size: 28px; }
+
+  .proj-modal__msg{ font-size: 18px; }
+
+  .proj-modal__action{ font-size: 18px; }
+
+  .rent-card__top{
+    grid-template-columns: 1fr;
+  }
+
+  .rent-card__status-pill{
+    justify-self: start;
+  }
+
+}
+
+@media (min-width: 1024px){
+
+  .fuel-body{
+    padding: 26px 40px;
+  }
+
+  .fuel-body > .rent-list{
+    width: min(720px,100%);
+    max-width: 720px;
+    margin: 0;
+  }
+
+  .fuel-project,
+  .fuel-form,
+  .fuel-photo__inner{
+    width: min(720px,100%);
+    max-width: 720px;
+  }
+
+  .fuel-photo{
+    padding: 26px 40px;
+  }
+
+}
+
+/* 🔥 Filtros mapa mobile-first */
+.map-filtros {
+  margin-bottom: 10px;
+}
+
+.map-filtros-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #666;
+}
+
+.map-filtros-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* inputs chicos y compactos */
+.map-input {
+  width: 70px;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* placeholder suave */
+.map-input::placeholder {
+  color: #999;
+}
+
+/* separador */
+.map-sep {
+  font-size: 16px;
+  color: #999;
+}
+
+/* botón limpiar */
+.map-clear {
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+
+.map-clear:hover {
+  background: #eaeaea;
+}
+
+/* =========================
+   POPUPS MAPA AFILIACIONES
+   ========================= */
+
+.afi-popup .leaflet-popup-content {
+  margin: 0;
+  width: min(320px, calc(100vw - 90px)) !important;
+}
+
+.afi-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.afi-popup .leaflet-popup-tip-container {
+  margin-top: -1px;
+}
+
+.afi-popup-card {
+  background: #fff;
+}
+
+.afi-popup-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #e7e7e7;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.afi-popup-body {
+  max-height: min(240px, 45vh);
+  overflow-y: auto;
+  padding: 0 14px;
+}
+
+.afi-popup-person {
+  padding: 10px 0;
+  border-bottom: 1px solid #ececec;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.afi-popup-person:last-child {
+  border-bottom: 0;
+}
+
+.afi-popup-name {
+  margin-bottom: 2px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* móvil */
+@media (max-width: 768px) {
+  .afi-popup .leaflet-popup-content {
+    width: min(280px, calc(100vw - 70px)) !important;
+  }
+
+  .afi-popup-header {
+    padding: 10px 12px 8px;
+    font-size: 13px;
+  }
+
+  .afi-popup-body {
+    max-height: min(220px, 42vh);
+    padding: 0 12px;
+  }
+
+  .afi-popup-person {
+    padding: 8px 0;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+}
+
+.afi-popup-person .extranjero {
+  color: #b00020;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.leaflet-popup-close-button {
+  font-size: 18px;
+  padding: 6px 8px;
+}
+
+.map-error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #b00020;
+}
+
+.map-tipo-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.map-chip.is-active {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+}
+
+.map-chip:hover {
+  background: #f5f5f5;
+}
+
+.map-chip.is-active:hover {
+  background: #c62828;
+}
+
+/* =========================
+   AFILIACIONES - PERSONAS CARDS V2
+   ========================= */
+
+.afi-person-card{
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 0;
+  margin-bottom: 12px;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fffdf4;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  cursor: pointer;
+
+  /* interacción */
+  transition: transform .08s ease, box-shadow .08s ease;
+  -webkit-tap-highlight-color: transparent; /* saca el flash azul en mobile */
+  touch-action: manipulation; /* mejora respuesta táctil */
+}
+
+.afi-person-card:active{
+  transform: scale(.998);
+  box-shadow: 0 0 0 rgba(0,0,0,0);
+}
+
+.afi-person-card__accent{
+  background: #d8eac8;
+}
+
+.afi-person-card.is-oficio .afi-person-card__accent{
+  background: #cfe7bf;
+}
+
+.afi-person-card.is-voluntaria .afi-person-card__accent{
+  background: #e8dec0;
+}
+
+.afi-person-card.is-sin-accion .afi-person-card__accent{
+  background: #d9d9d9;
+}
+
+.afi-person-card__content{
+  padding: 14px 14px 12px;
+}
+
+.afi-person-card__top{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.afi-person-card__name{
+  font-size: clamp(15px, 4.4vw, 21px);
+  line-height: 1.18;
+  font-weight: 700;
+  color: #7a1f1f;
+  word-break: break-word;
+}
+
+.afi-person-card__action-chip{
+  max-width: 140px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: clamp(11px, 3.2vw, 14px);
+  line-height: 1.15;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  word-break: break-word;
+  background: #f3f3f3;
+  color: #444;
+  border: 1px solid #e2e2e2;
+}
+
+.afi-person-card__action-chip.is-oficio{
+  background: #eef7e7;
+  color: #355c23;
+  border-color: #cfe7bf;
+}
+
+.afi-person-card__action-chip.is-voluntaria{
+  background: #faf2dd;
+  color: #6a4d1b;
+  border-color: #ead8a8;
+}
+
+.afi-person-card__action-chip.is-sin-accion{
+  background: #f1f1f1;
+  color: #666;
+  border-color: #dddddd;
+}
+
+.afi-person-card__location{
+  margin-top: 10px;
+  font-size: clamp(14px, 4vw, 18px);
+  color: #777;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.afi-person-card__extra{
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.afi-person-card__age{
+  font-size: clamp(13px, 3.8vw, 16px);
+  color: #666;
+  line-height: 1.2;
+}
+
+.afi-person-card__footer{
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.afi-person-card__meta{
+  font-size: clamp(13px, 3.8vw, 16px);
+  color: #666;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.afi-person-card__affiliation{
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: clamp(12px, 3.6vw, 15px);
+  line-height: 1.2;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.afi-person-card__affiliation.is-oficio{
+  background: #eef7e7;
+  color: #355c23;
+}
+
+.afi-person-card__affiliation.is-voluntaria{
+  background: #f8f8f8;
+  color: #555;
+}
+
+.afi-person-card__affiliation.is-sin-accion{
+  background: #f1f1f1;
+  color: #666;
+}
+
+.afi-person-card__doc{
+  font-size: clamp(13px, 3.8vw, 16px);
+  color: #666;
+  line-height: 1.2;
+}
+
+/* =========================
+   AFILIACIONES - PAGINACION
+   ========================= */
+
+.afi-pagination{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0 6px;
+  padding-bottom: 6px;
+}
+
+.afi-pagination__pages{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.afi-pagination__btn,
+.afi-pagination__page{
+  appearance: none;
+  border: 1px solid var(--divider);
+  background: #fff;
+  color: #333;
+  border-radius: 6px;
+  min-width: 42px;
+  height: 40px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: clamp(13px, 3.8vw, 16px);
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+
+.afi-pagination__page.is-active{
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.afi-pagination__btn:disabled,
+.afi-pagination__page:disabled{
+  opacity: .5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.afi-pagination__dots{
+  color: #888;
+  font-size: 14px;
+  padding: 0 2px;
+}
+
+/* =========================
+   PERSONAS MOBILE
+   ========================= */
+
+@media (max-width: 520px){
+  .afi-person-card__top{
+    grid-template-columns: 1fr;
+  }
+
+  .afi-person-card__action-chip{
+    max-width: none;
+    justify-self: start;
+  }
+}
+
+/* =========================
+   AFILIACIONES - FILTRO EDAD MODAL
+   ========================= */
+
+.afi-modal-age-range{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.afi-modal-age-input{
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.afi-modal-age-sep{
+  flex: 0 0 auto;
+  color: #888;
+  font-size: clamp(14px, 4.2vw, 20px);
+  line-height: 1;
+}
+
+/* sacar spinners en number */
+.afi-modal-age-input::-webkit-outer-spin-button,
+.afi-modal-age-input::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.afi-modal-age-input{
+  appearance: textfield;        /* estándar */
+  -moz-appearance: textfield;   /* Firefox */
+}
+
+@media (max-width: 520px){
+  .afi-modal-age-range{
+    gap: 8px;
+  }
+}
+
+.afi-modal-underline.is-error{
+  background: #d32f2f;
+}
+
+.afi-modal-input.is-error{
+  color: inherit;
+}
+
+.afi-modal-error{
+  margin-top: 8px;
+  font-size: clamp(12px, 3.6vw, 15px);
+  color: #d32f2f;
+  line-height: 1.25;
+}
+
+/* =========================
+   AFILIACIONES - DETALLE PERSONA MOBILE LIKE
+   ========================= */
+
+.afi-detail{
+  min-height: 100%;
+  background: #efefef;
+}
+
+/* HERO */
+.afi-detail-hero{
+  position: relative;
+  background: #d82323;
+  color: #fff;
+  padding: 14px 0 20px;
+}
+
+.afi-detail-hero__top{
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 14px;
+  min-height: 40px;
+}
+
+.afi-detail-back{
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.afi-detail-back .material-symbols-outlined{
+  font-size: 28px;
+}
+
+.afi-detail-hero__chip{
+  width: fit-content;
+  max-width: calc(100% - 28px);
+  margin: 2px auto 16px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-size: clamp(12px, 3.2vw, 18px);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.15;
+  word-break: break-word;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+}
+
+/* colores del chip superior según smsResultadoColor */
+.afi-detail-hero__chip.is-azul{
+  background: #7f89df;
+  color: #fff;
+}
+
+.afi-detail-hero__chip.is-verde-claro{
+  background: #8fcb7f;
+  color: #fff;
+}
+
+.afi-detail-hero__chip.is-verde-oscuro{
+  background: #5fa15a;
+  color: #fff;
+}
+
+.afi-detail-hero__chip.is-rojo{
+  background: linear-gradient(180deg, #ef8e8e 0%, #db6f6f 100%);
+  color: #fff;
+}
+
+.afi-detail-hero__name{
+  padding: 0 18px;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+  font-size: clamp(24px, 6.6vw, 52px);
+  line-height: 1.08;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.afi-detail-hero__sub{
+  margin-top: 14px;
+  padding: 0 18px;
+  text-align: center;
+  font-size: clamp(15px, 4.8vw, 28px);
+  line-height: 1.22;
+  font-weight: 500;
+}
+
+.afi-detail-hero__doc{
+  margin-top: 10px;
+  padding: 0 18px;
+  text-align: center;
+  font-size: clamp(18px, 5vw, 30px);
+  line-height: 1.15;
+  font-weight: 500;
+}
+
+/* TABS */
+.afi-detail-tabs{
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  align-items: stretch;
+  background: #fff;
+  border-bottom: 1px solid #e5dede;
+}
+
+.afi-detail-tab{
+  appearance: none;
+  border: 0;
+  background: #fff;
+  color: #b61c1c;
+  font-weight: 700;
+  padding: 15px 8px;
+  position: relative;
+  cursor: pointer;
+  font-size: clamp(14px, 3.9vw, 22px);
+}
+
+.afi-detail-tab.is-active::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: #b61c1c;
+}
+
+.afi-detail-tab-divider{
+  width: 1px;
+  background: #ece5e5;
+}
+
+/* BODY */
+.afi-detail-body{
+  padding: 18px 18px 26px;
+  display: grid;
+  gap: 18px;
+  background: #efefef;
+}
+
+.afi-detail-section{
+  padding: 8px 4px 18px;
+  border-bottom: 2px solid #8c8c8c;
+}
+
+.afi-detail-section:last-child{
+  border-bottom: 0;
+}
+
+.afi-detail-section__title{
+  margin: 0 0 18px;
+  font-size: clamp(18px, 5vw, 34px);
+  font-weight: 400;
+  color: #111;
+}
+
+.afi-detail-section__value{
+  font-size: clamp(18px, 5vw, 28px);
+  color: #777;
+  line-height: 1.18;
+  word-break: break-word;
+  margin-bottom: 24px;
+}
+
+.afi-detail-section__actions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 34px;
+}
+
+.afi-detail-link{
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #d12626;
+  font-size: clamp(14px, 4vw, 24px);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* TELEFONOS */
+.afi-detail-phone-list{
+  display: grid;
+  gap: 18px;
+}
+
+.afi-detail-phone-row{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.afi-detail-phone-number{
+  font-size: clamp(18px, 5.2vw, 30px);
+  color: #6f6f6f;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* INFORMACION */
+.afi-detail-info-grid{
+  display: grid;
+  gap: 14px;
+}
+
+.afi-detail-info-item{
+  display: grid;
+  gap: 4px;
+}
+
+.afi-detail-info-label{
+  font-size: clamp(12px, 3.5vw, 16px);
+  color: #9b9b9b;
+  line-height: 1.2;
+}
+
+.afi-detail-info-value{
+  font-size: clamp(16px, 4.6vw, 24px);
+  color: #666;
+  line-height: 1.18;
+  word-break: break-word;
+}
+
+/* ACCIONES RAPIDAS */
+.afi-detail-quick-actions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 38px;
+}
+
+/* LISTA DE ACCIONES */
+.afi-detail-actions{
+  display: grid;
+  gap: 14px;
+}
+
+.afi-action-card{
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #d8d8d8;
+  background: #eef6ea;
+}
+
+.afi-action-card.is-finalizado{
+  background: #e8f3e5;
+}
+
+.afi-action-card.is-pendiente{
+  background: #eef6ea;
+}
+
+.afi-action-card.is-desconocido{
+  background: #f3f3f3;
+}
+
+.afi-action-card__top{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.afi-action-card__title{
+  font-size: clamp(18px, 4vw, 28px);
+  color: #222;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.afi-action-card__date{
+  font-size: clamp(13px, 3.2vw, 18px);
+  color: #999;
+  text-align: right;
+}
+
+.afi-action-card__state{
+  margin-top: 10px;
+  font-size: clamp(14px, 3.6vw, 19px);
+  color: #c62828;
+  font-weight: 700;
+}
+
+.afi-action-card__obs{
+  margin-top: 14px;
+  font-size: clamp(14px, 3.6vw, 20px);
+  color: #666;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.afi-action-card__footer{
+  margin-top: 12px;
+  font-size: clamp(14px, 3.4vw, 18px);
+  color: #666;
+}
+
+/* MOBILE */
+@media (max-width: 520px){
+  .afi-detail-body{
+    padding: 16px 16px 24px;
+  }
+
+  .afi-action-card__top{
+    grid-template-columns: 1fr;
+  }
+
+  .afi-action-card__date{
+    text-align: left;
+  }
+
+  .afi-detail-section__actions{
+    gap: 16px 24px;
+  }
+
+  .afi-detail-quick-actions{
+    gap: 18px 26px;
+  }
+}
+
+/* =========================
+   AFILIACIONES - DETALLE INFO GRID
+   ========================= */
+
+.afi-detail-info-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 28px;
+}
+
+.afi-detail-info-item{
+  min-width: 0;
+}
+
+.afi-detail-info-label{
+  font-size: clamp(12px, 3.4vw, 16px);
+  color: #9a9a9a;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.afi-detail-info-value{
+  font-size: clamp(15px, 4.2vw, 22px);
+  color: #666;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.afi-detail-section__value--multiline{
+  white-space: pre-line;
+}
+
+.afi-detail-phone-row.is-empty{
+  grid-template-columns: 1fr;
+}
+
+.afi-detail-phone-number.is-empty{
+  font-weight: 500;
+  color: #777;
+}
+
+@media (max-width: 520px){
+  .afi-detail-info-grid{
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 20px;
+  }
+}
+
+/* =========================
+   AFILIACIONES - ACCIONES RAPIDAS (ANDROID STYLE)
+   ========================= */
+
+.afi-detail-quick-actions{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 28px;
+  margin-top: 6px;
+}
+
+/* botón estilo app */
+.afi-detail-quick-actions .afi-detail-link{
+  text-align: center;
+  padding: 10px 6px;
+  border-radius: 6px;
+
+  font-size: clamp(14px, 4vw, 20px);
+  font-weight: 600;
+  letter-spacing: .3px;
+
+  color: #d12626;
+  background: transparent;
+
+  transition: background .12s ease, transform .06s ease;
+}
+
+/* feedback táctil */
+.afi-detail-quick-actions .afi-detail-link:active{
+  background: rgba(209,38,38,.08);
+  transform: scale(.98);
+}
+
+/* disabled (cuando no hay CI por ejemplo) */
+.afi-detail-quick-actions .afi-detail-link:disabled{
+  color: #bbb;
+  pointer-events: none;
+}
+
+/* mobile más compacto */
+@media (max-width: 520px){
+  .afi-detail-quick-actions{
+    gap: 14px 18px;
+  }
+}
