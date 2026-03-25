@@ -183,6 +183,20 @@ function Pagination({
 /* =========================
    DETALLE - HEADER
 ========================= */
+
+function formatFechaDDMMYYYY(value) {
+  if (!value) return "N/D";
+
+  const d = new Date(value);
+  if (isNaN(d)) return "N/D";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 function PersonaDetalleHeader({ item, onClose }) {
   const nombre = item?.nombreCompleto || "-";
   const cedula = item?.cedula || "s/d";
@@ -192,12 +206,10 @@ function PersonaDetalleHeader({ item, onClose }) {
       ? `${item.edad} años`
       : "Edad s/d";
 
-  const fechaNac = item?.fechaNac
-    ? new Date(item.fechaNac).toLocaleDateString("es-UY")
-    : "N/D";
+  const fechaNac = formatFechaDDMMYYYY(item?.fechaNac);
 
   const chipTexto = item?.actividadChipTexto || item?.actividadChipLabel || "Consultar";
-  const chipColor = item?.actividadChipColor || "consultar";
+  const chipColor = item?.actividadChipColor || "Consultar";
 
   return (
     <div className="afi-detail-hero">

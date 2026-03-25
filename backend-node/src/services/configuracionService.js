@@ -28,12 +28,12 @@ async function getConfiguracionAsesores() {
 
   const query = `
     SELECT
-      CAST([CA_ASESOR] AS int) AS ca_asesor,
-      MIN(CAST([CA_CIUDAD] AS varchar(200))) AS ca_ciudad
-    FROM [2023_AFAP_Gestion].[dbo].[CIUDADASIGNACION]
-    WHERE TRY_CAST([CA_ASESOR] AS int) IS NOT NULL
-    GROUP BY CAST([CA_ASESOR] AS int)
-    ORDER BY CAST([CA_ASESOR] AS int)
+      CAST([asenum] AS int) AS ca_asesor,
+      CAST([asenom] AS varchar(200)) AS ca_ciudad
+    FROM [2023_AFAP_Gestion].[dbo].[ASESORES]
+    WHERE TRY_CAST([asenum] AS int) IS NOT NULL
+    AND [asedatos] = 1
+    ORDER BY CAST([asenum] AS int)
   `;
 
   const result = await pool.request().query(query);

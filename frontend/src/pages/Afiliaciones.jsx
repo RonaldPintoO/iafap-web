@@ -373,7 +373,7 @@ export default function Afiliaciones() {
           if (items.includes(prev)) return prev;
           return "Todos";
         });
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setTopLocalidades(["Todos"]);
           setTopLocValue("Todos");
@@ -574,60 +574,58 @@ export default function Afiliaciones() {
     return () => {
       cancelled = true;
     };
-  }, [tab, personasPage, personasReloadToken, topLocValue, personasAppliedValues]);
+  }, [tab, personasPage, personasReloadToken, topLocValue, personasAppliedValues, personasItems.length]);
 
   useEffect(() => {
     setPersonasPage(1);
   }, [topLocValue, personasAppliedValues]);
 
   useEffect(() => {
-    if (!personaSeleccionada) return;
+    if (!personaSeleccionada?.cedula) return;
     if (detalleTab !== "acciones") return;
 
     let cancelled = false;
+    const cedula = String(personaSeleccionada.cedula).trim();
 
-    const cedula = String(personaSeleccionada?.cedula || "").trim();
-    if (!cedula) return;
-
-    const fetchAcciones = async (isBackground = false) => {
+    const fetchAcciones = async () => {
       try {
-        if (!isBackground) setAccionesPersonaLoading(true);
+        if (!cancelled) {
+          setAccionesPersonaLoading(true);
+          setAccionesPersonaError("");
+        }
 
         const res = await fetch(
           `${API_BASE_URL}/personas/${encodeURIComponent(cedula)}/acciones`
         );
 
-        if (!res.ok) throw new Error("No se pudieron cargar las acciones");
+        if (!res.ok) {
+          throw new Error("No se pudieron cargar las acciones");
+        }
 
         const data = await res.json();
 
         if (!cancelled) {
           setAccionesPersona(Array.isArray(data.items) ? data.items : []);
+          setAccionesPersonaError("");
         }
       } catch (err) {
         if (!cancelled) {
+          setAccionesPersona([]);
           setAccionesPersonaError(err.message || "Error cargando acciones");
         }
       } finally {
-        if (!cancelled && !isBackground) {
+        if (!cancelled) {
           setAccionesPersonaLoading(false);
         }
       }
     };
 
-    // 🔹 1. carga inmediata (snapshot)
-    fetchAcciones(false);
-
-    // 🔹 2. recarga automática en background (para traer lo nuevo)
-    const timeout = setTimeout(() => {
-      fetchAcciones(true);
-    }, 1200); // ⏱️ 1.2s después
+    fetchAcciones();
 
     return () => {
       cancelled = true;
-      clearTimeout(timeout);
     };
-  }, [personaSeleccionada, detalleTab]);
+  }, [personaSeleccionada?.cedula, detalleTab]);
 
   useEffect(() => {
     if (tab !== "mapa") return;
