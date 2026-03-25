@@ -357,11 +357,16 @@ function getPersonasSnapshotStatus() {
   return snapshotService.getSnapshotStatus();
 }
 
+async function getAccionAdjuntoPdf({ accnum }) {
+  return snapshotService.getAccionPdfAdjunto(accnum);
+}
+
 module.exports = {
   getPersonas,
   getLocalidades,
   getFiltrosPersonas,
   refreshPersonasSnapshot,
   getAccionesPersona,
+  getAccionAdjuntoPdf,
   getPersonasSnapshotStatus,
 };

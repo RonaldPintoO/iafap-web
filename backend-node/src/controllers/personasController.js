@@ -127,6 +127,27 @@ async function getAccionesPersona(req, res) {
   }
 }
 
+async function getAccionAdjuntoPdf(req, res) {
+  try {
+    const { accnum } = req.params;
+
+    const pdf = await personasService.getAccionAdjuntoPdf({ accnum });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${pdf.filename}"`);
+    return res.send(pdf.buffer);
+
+    return res.send(pdf.buffer);
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error obteniendo adjunto PDF",
+    });
+  }
+}
+
 async function refreshSnapshot(req, res) {
   try {
     const data = await personasService.refreshPersonasSnapshot();
@@ -172,6 +193,7 @@ function getSnapshotStatus(req, res) {
 module.exports = {
   getPersonas,
   getAccionesPersona,
+  getAccionAdjuntoPdf,
   getLocalidades,
   getFiltros,
   refreshSnapshot,

@@ -433,6 +433,9 @@ function buildAccionesIndex(rows) {
     }
 
     const asesorNombreCompleto = cleanText(row.asesor_nombre_completo);
+    const accext = cleanText(row.accext).toLowerCase();
+    const tieneAdjunto = Number(row.tiene_adjunto) === 1;
+    const resnum = toNumberOrNull(row.resnum);
 
     const observaciones = [
       cleanText(row.accobs),
@@ -448,11 +451,14 @@ function buildAccionesIndex(rows) {
       fechaTexto: formatFechaAccionTexto(row.acccuando),
       asenum: cleanText(row.asenum),
       asesorNombreCompleto,
-      resnum: toNumberOrNull(row.resnum),
+      resnum,
       resnom: cleanText(row.resnom) || "Sin resultado",
       restipo: toNumberOrNull(row.restipo),
       estado: buildEstadoAccion(row.restipo),
       observacion: observaciones.join(" | "),
+      accext,
+      tieneAdjunto,
+      puedeAbrirPdf: resnum === 25 && accext === "pdf" && tieneAdjunto,
     });
   }
 
@@ -718,6 +724,11 @@ async function fetchAccionesRowsFromDb() {
       a.accobs2,
       a.acctelnvo,
       a.accdirnvo,
+      a.accext,
+      CASE
+        WHEN a.accadjunto IS NOT NULL THEN 1
+        ELSE 0
+      END AS tiene_adjunto,
       r.resnom,
       r.restipo,
       aa.nombre AS asesor_nombre,
@@ -902,6 +913,11 @@ async function refreshAccionesForDocumento(cedula) {
       a.accobs2,
       a.acctelnvo,
       a.accdirnvo,
+      a.accext,
+      CASE
+        WHEN a.accadjunto IS NOT NULL THEN 1
+        ELSE 0
+      END AS tiene_adjunto,
       r.resnom,
       r.restipo,
       aa.nombre AS asesor_nombre,
@@ -1002,6 +1018,71 @@ async function getPersonasPage({ asesor, page = 1, pageSize = MAX_PAGE_SIZE }) {
   };
 }
 
+async function getAccionPdfAdjunto(accnum) {
+  const accnumNum = Number(accnum);
+
+  if (!Number.isFinite(accnumNum)) {
+    const error = new Error("El parámetro 'accnum' es inválido");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pool = await getPool();
+  const request = pool.request();
+  request.input("accnum", accnumNum);
+
+  const query = `
+    SELECT
+      a.accnum,
+      a.perci,
+      a.accadjunto
+    FROM [2023_AFAP_Gestion].[dbo].[ACCIONES] a
+    WHERE a.accnum = @accnum
+      AND a.resnum = 25
+      AND LOWER(LTRIM(RTRIM(ISNULL(a.accext, '')))) = 'pdf'
+      AND a.accadjunto IS NOT NULL
+  `;
+
+  const result = await request.query(query);
+  const row = Array.isArray(result.recordset) ? result.recordset[0] : null;
+
+  if (!row) {
+    const error = new Error("La acción no tiene un PDF disponible");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const rawAdjunto = row.accadjunto;
+
+  let buffer = null;
+
+  if (Buffer.isBuffer(rawAdjunto)) {
+    buffer = rawAdjunto;
+  } else {
+    const hex = String(rawAdjunto).replace(/^0x/i, "").trim();
+
+    if (!hex) {
+      const error = new Error("El adjunto PDF está vacío");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    buffer = Buffer.from(hex, "hex");
+  }
+
+  if (!buffer || !buffer.length) {
+    const error = new Error("No se pudo construir el PDF adjunto");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return {
+    filename: `estado_de_cuenta_${row.perci || accnumNum}.pdf`,
+    mimeType: "application/pdf",
+    buffer,
+  };
+}
+
 function startAutoRefresh(intervalMs = SNAPSHOT_REFRESH_MS) {
   if (refreshTimer) {
     clearInterval(refreshTimer);
@@ -1032,6 +1113,7 @@ module.exports = {
   getAccionesByDocumento,
   getSmsByDocumento,
   refreshAccionesForDocumento,
+  getAccionPdfAdjunto,
   getPersonasPage,
   startAutoRefresh,
   stopAutoRefresh,

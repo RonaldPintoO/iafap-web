@@ -1,4 +1,5 @@
 import ToolbarSelect from "./ToolbarSelect";
+import { API_BASE_URL } from "../../config/api";
 
 /* =========================
    HELPERS
@@ -476,6 +477,16 @@ function DetalleAcciones({
   accionesPersonaLoading,
   accionesPersonaError,
 }) {
+  const handleOpenPdf = (accion) => {
+    if (!accion?.accnum || !accion?.puedeAbrirPdf) return;
+
+    window.open(
+      `${API_BASE_URL}/personas/acciones/${encodeURIComponent(accion.accnum)}/adjunto`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
+
   if (accionesPersonaLoading) {
     return (
       <div className="afi-detail-body">
@@ -534,7 +545,19 @@ function DetalleAcciones({
               ) : null}
 
               <div className="afi-action-card__footer">
-                Asesor: {accion?.asesorNombreCompleto || accion?.asenum || "-"}
+                <div className="afi-action-card__footer-text">
+                  Asesor: {accion?.asesorNombreCompleto || accion?.asenum || "-"}
+                </div>
+
+                {accion?.puedeAbrirPdf ? (
+                  <button
+                    type="button"
+                    className="afi-detail-link afi-action-card__pdf-btn"
+                    onClick={() => handleOpenPdf(accion)}
+                  >
+                    Ver PDF
+                  </button>
+                ) : null}
               </div>
             </article>
           );
