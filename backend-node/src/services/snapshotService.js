@@ -421,6 +421,59 @@ function buildEstadoAccion(restipo) {
   return "Desconocido";
 }
 
+function normalizeAdjuntoExt(value) {
+  return cleanText(value).toLowerCase();
+}
+
+function getAdjuntoCategoria(ext) {
+  const value = normalizeAdjuntoExt(ext);
+
+  if (["pdf"].includes(value)) return "documento";
+  if (["jpg", "jpeg", "png", "heif", "heic"].includes(value)) return "imagen";
+  if (["mp3", "wav", "ogg", "amr"].includes(value)) return "audio";
+  if (["mp4", "mpeg"].includes(value)) return "video";
+
+  return "";
+}
+
+function getAdjuntoAccionLabel(ext) {
+  const categoria = getAdjuntoCategoria(ext);
+
+  if (categoria === "documento") return "Ver PDF";
+  if (categoria === "imagen") return "Ver Imagen";
+  if (categoria === "audio") return "Descargar Audio";
+  if (categoria === "video") return "Descargar Video";
+
+  return "";
+}
+
+function getAdjuntoMimeType(ext) {
+  const value = normalizeAdjuntoExt(ext);
+
+  if (value === "pdf") return "application/pdf";
+  if (value === "jpg" || value === "jpeg") return "image/jpeg";
+  if (value === "png") return "image/png";
+  if (value === "heif") return "image/heif";
+  if (value === "heic") return "image/heic";
+  if (value === "mp3") return "audio/mpeg";
+  if (value === "wav") return "audio/wav";
+  if (value === "ogg") return "audio/ogg";
+  if (value === "amr") return "audio/amr";
+  if (value === "mp4") return "video/mp4";
+  if (value === "mpeg") return "video/mpeg";
+
+  return "application/octet-stream";
+}
+
+function isAdjuntoInline(ext) {
+  const categoria = getAdjuntoCategoria(ext);
+  return categoria === "documento" || categoria === "imagen";
+}
+
+function isAdjuntoSoportado(ext) {
+  return Boolean(getAdjuntoCategoria(ext));
+}
+
 function buildAccionesIndex(rows) {
   const map = new Map();
 
@@ -433,9 +486,13 @@ function buildAccionesIndex(rows) {
     }
 
     const asesorNombreCompleto = cleanText(row.asesor_nombre_completo);
-    const accext = cleanText(row.accext).toLowerCase();
+    const accext = normalizeAdjuntoExt(row.accext);
     const tieneAdjunto = Number(row.tiene_adjunto) === 1;
     const resnum = toNumberOrNull(row.resnum);
+    const adjuntoCategoria = getAdjuntoCategoria(accext);
+    const adjuntoAccionLabel = getAdjuntoAccionLabel(accext);
+    const tieneAdjuntoVisible =
+      tieneAdjunto && Boolean(accext) && isAdjuntoSoportado(accext);
 
     const observaciones = [
       cleanText(row.accobs),
@@ -458,7 +515,9 @@ function buildAccionesIndex(rows) {
       observacion: observaciones.join(" | "),
       accext,
       tieneAdjunto,
-      puedeAbrirPdf: resnum === 25 && accext === "pdf" && tieneAdjunto,
+      tieneAdjuntoVisible,
+      adjuntoCategoria,
+      adjuntoAccionLabel,
     });
   }
 
@@ -1035,23 +1094,28 @@ async function getAccionPdfAdjunto(accnum) {
     SELECT
       a.accnum,
       a.perci,
+      a.accext,
       a.accadjunto
     FROM [2023_AFAP_Gestion].[dbo].[ACCIONES] a
     WHERE a.accnum = @accnum
-      AND a.resnum = 25
-      AND LOWER(LTRIM(RTRIM(ISNULL(a.accext, '')))) = 'pdf'
       AND a.accadjunto IS NOT NULL
+      AND LOWER(LTRIM(RTRIM(ISNULL(a.accext, '')))) IN (
+        'pdf', 'jpg', 'jpeg', 'png', 'heif', 'heic',
+        'mp3', 'wav', 'ogg', 'amr',
+        'mp4', 'mpeg'
+      )
   `;
 
   const result = await request.query(query);
   const row = Array.isArray(result.recordset) ? result.recordset[0] : null;
 
   if (!row) {
-    const error = new Error("La acción no tiene un PDF disponible");
+    const error = new Error("La acción no tiene un adjunto compatible disponible");
     error.statusCode = 404;
     throw error;
   }
 
+  const ext = normalizeAdjuntoExt(row.accext);
   const rawAdjunto = row.accadjunto;
 
   let buffer = null;
@@ -1062,7 +1126,7 @@ async function getAccionPdfAdjunto(accnum) {
     const hex = String(rawAdjunto).replace(/^0x/i, "").trim();
 
     if (!hex) {
-      const error = new Error("El adjunto PDF está vacío");
+      const error = new Error("El adjunto está vacío");
       error.statusCode = 404;
       throw error;
     }
@@ -1071,14 +1135,21 @@ async function getAccionPdfAdjunto(accnum) {
   }
 
   if (!buffer || !buffer.length) {
-    const error = new Error("No se pudo construir el PDF adjunto");
+    const error = new Error("No se pudo construir el adjunto");
     error.statusCode = 500;
     throw error;
   }
 
+  const categoria = getAdjuntoCategoria(ext);
+  const filenameBase = `adjunto_${row.perci || accnumNum}`;
+  const filename = ext ? `${filenameBase}.${ext}` : filenameBase;
+
   return {
-    filename: `estado_de_cuenta_${row.perci || accnumNum}.pdf`,
-    mimeType: "application/pdf",
+    filename,
+    mimeType: getAdjuntoMimeType(ext),
+    disposition: isAdjuntoInline(ext) ? "inline" : "attachment",
+    categoria,
+    ext,
     buffer,
   };
 }

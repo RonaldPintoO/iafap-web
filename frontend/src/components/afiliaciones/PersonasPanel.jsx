@@ -477,8 +477,8 @@ function DetalleAcciones({
   accionesPersonaLoading,
   accionesPersonaError,
 }) {
-  const handleOpenPdf = (accion) => {
-    if (!accion?.accnum || !accion?.puedeAbrirPdf) return;
+  const handleOpenAdjunto = (accion) => {
+    if (!accion?.accnum || !accion?.tieneAdjuntoVisible) return;
 
     window.open(
       `${API_BASE_URL}/personas/acciones/${encodeURIComponent(accion.accnum)}/adjunto`,
@@ -549,13 +549,13 @@ function DetalleAcciones({
                   Asesor: {accion?.asesorNombreCompleto || accion?.asenum || "-"}
                 </div>
 
-                {accion?.puedeAbrirPdf ? (
+                {accion?.tieneAdjuntoVisible ? (
                   <button
                     type="button"
                     className="afi-detail-link afi-action-card__pdf-btn"
-                    onClick={() => handleOpenPdf(accion)}
+                    onClick={() => handleOpenAdjunto(accion)}
                   >
-                    Ver PDF
+                    {accion?.adjuntoAccionLabel || "Ver Adjunto"}
                   </button>
                 ) : null}
               </div>

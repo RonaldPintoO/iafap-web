@@ -131,19 +131,21 @@ async function getAccionAdjuntoPdf(req, res) {
   try {
     const { accnum } = req.params;
 
-    const pdf = await personasService.getAccionAdjuntoPdf({ accnum });
+    const adjunto = await personasService.getAccionAdjuntoPdf({ accnum });
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${pdf.filename}"`);
-    return res.send(pdf.buffer);
+    res.setHeader("Content-Type", adjunto.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `${adjunto.disposition}; filename="${adjunto.filename}"`
+    );
 
-    return res.send(pdf.buffer);
+    return res.send(adjunto.buffer);
   } catch (error) {
     const statusCode = error.statusCode || 500;
 
     return res.status(statusCode).json({
       ok: false,
-      detail: error.message || "Error obteniendo adjunto PDF",
+      detail: error.message || "Error obteniendo adjunto",
     });
   }
 }
