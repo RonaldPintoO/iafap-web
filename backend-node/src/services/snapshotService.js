@@ -381,6 +381,17 @@ function mapDbRowToSnapshotItem(row, smsItem = null) {
     smsResultadoFechaTexto,
     smsResultadoColor,
     heroChipTexto,
+
+    actividadChipLabel: smsResultadoLabel || resnom || "Consultar",
+    actividadChipColor:
+      smsResultadoColor ||
+      buildCardVariant(asignadoOficio, resnomRaw) ||
+      "consultar",
+    actividadChipTexto:
+      heroChipTexto ||
+      smsResultadoLabel ||
+      resnom ||
+      "Consultar",
   };
 }
 
@@ -896,9 +907,9 @@ async function buildFreshSnapshot() {
 }
 
 async function refreshSnapshot(options = {}) {
-  const { reason = "manual", force = false } = options;
+  const { reason = "manual" } = options;
 
-  if (snapshotState.isRefreshing && !force) {
+  if (snapshotState.isRefreshing && activeRefreshPromise) {
     return activeRefreshPromise;
   }
 

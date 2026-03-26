@@ -32,8 +32,17 @@ function PersonaCard({ item, onClick }) {
 
   const cedulaTexto = item?.cedula ? `CI: ${item.cedula}` : "CI: s/d";
 
-  const chipTexto = item?.actividadChipLabel || item?.resnom || "Consultar";
-  const variant = item?.actividadChipColor || item?.cardVariant || "consultar";
+  const chipTexto =
+    item?.actividadChipLabel ||
+    item?.smsResultadoLabel ||
+    item?.resnom ||
+    "Consultar";
+
+  const variant =
+    item?.actividadChipColor ||
+    item?.smsResultadoColor ||
+    item?.cardVariant ||
+    "consultar";
   const leyendaAfiliacion =
     item?.leyendaAfiliacion || "Posible Afiliación Voluntaria";
 

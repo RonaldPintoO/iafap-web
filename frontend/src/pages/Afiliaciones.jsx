@@ -131,13 +131,11 @@ export default function Afiliaciones() {
     setShowFilters(false);
     handleClosePersonaDetalle();
 
-    try {
-      await fetch(`${API_BASE_URL}/personas/snapshot/refresh`, {
-        method: "POST",
-      });
-    } catch (err) {
+    fetch(`${API_BASE_URL}/personas/snapshot/refresh`, {
+      method: "POST",
+    }).catch((err) => {
       console.error("No se pudo refrescar snapshot de personas:", err);
-    }
+    });
 
     setPersonasPage(1);
     setPersonasReloadToken((prev) => prev + 1);
@@ -461,7 +459,7 @@ export default function Afiliaciones() {
 
     const fetchPersonas = async () => {
       try {
-        const isFirstLoad = personasItems.length === 0;
+        const isFirstLoad = personasPage === 1 && personasItems.length === 0;
 
         if (isFirstLoad) setPersonasLoading(true);
         else setPersonasRefreshing(true);
@@ -574,7 +572,7 @@ export default function Afiliaciones() {
     return () => {
       cancelled = true;
     };
-  }, [tab, personasPage, personasReloadToken, topLocValue, personasAppliedValues, personasItems.length]);
+  }, [tab, personasPage, personasReloadToken, topLocValue, personasAppliedValues]);
 
   useEffect(() => {
     setPersonasPage(1);

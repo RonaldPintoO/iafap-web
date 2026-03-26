@@ -317,7 +317,7 @@ async function getFiltrosPersonas({ asesor, localidad = "Todos" }) {
 async function refreshPersonasSnapshot() {
   return snapshotService.refreshSnapshot({
     reason: "manual-endpoint",
-    force: true,
+    force: false,
   });
 }
 
@@ -330,14 +330,11 @@ async function getAccionesPersona({ cedula }) {
     throw error;
   }
 
-  // 🔹 1. asegurar snapshot
   await snapshotService.ensureSnapshotReady();
 
-  // 🔹 2. traer snapshot (instantáneo)
   const snapshotItems =
     snapshotService.getAccionesByDocumento(cedulaTxt) || [];
 
-  // 🔥 3. refresh en background (NO bloquea)
   snapshotService
     .refreshAccionesForDocumento(cedulaTxt)
     .catch((err) => {
