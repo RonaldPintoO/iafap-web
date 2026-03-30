@@ -29,6 +29,21 @@ function cleanText(value) {
   return String(value).trim();
 }
 
+function fixMojibake(value) {
+  const text = cleanText(value);
+  if (!text) return "";
+
+  return text
+    .replace(/autom\u00DFticamente/gi, "automáticamente")
+    .replace(/\u00DF/g, "á")
+    .replace(/\u221A\u00B0/g, "á")
+    .replace(/\u221A\u00A9/g, "é")
+    .replace(/\u221A\u00AD/g, "í")
+    .replace(/\u221A\u00B3/g, "ó")
+    .replace(/\u221A\u00BA/g, "ú")
+    .replace(/\u221A\u00B1/g, "ñ");
+}
+
 function buildNombreCompleto(
   primerNombre,
   segundoNombre,
@@ -414,15 +429,68 @@ function formatFechaAccionTexto(value) {
   }
 }
 
+const NORMALIZACIONES = [
+  {
+    pattern: /^#*\s*consultado por asesor/i,
+    value: "",
+  },
+];
+
+function normalizeAccobs(text) {
+  const value = fixMojibake(text);
+  if (!value) return "";
+
+  const normalized = value.trim();
+
+  for (const rule of NORMALIZACIONES) {
+    if (rule.pattern.test(normalized)) {
+      return rule.value; // puede ser ""
+    }
+  }
+
+  return normalized;
+}
+
 function buildObservacion(row) {
-  const partes = [];
+  const resnum = toNumberOrNull(row.resnum);
 
-  if (cleanText(row.accobs)) partes.push(cleanText(row.accobs));
-  if (cleanText(row.accobs2)) partes.push(cleanText(row.accobs2));
-  if (cleanText(row.acctelnvo)) partes.push(`Tel: ${cleanText(row.acctelnvo)}`);
-  if (cleanText(row.accdirnvo)) partes.push(`Dir: ${cleanText(row.accdirnvo)}`);
+  const accobs = normalizeAccobs(row.accobs);
+  const accobs2 = normalizeAccobs(row.accobs2);
+  const acctelnvo = cleanText(row.acctelnvo);
+  const accdirnvo = cleanText(row.accdirnvo);
 
-  return partes.join(" | ");
+  const bloques = [];
+
+  // RESNUM 40 → Empresa
+  if (resnum === 40) {
+    if (accobs) {
+      bloques.push({ label: "Nombre Empresa", value: accobs });
+    }
+    if (accdirnvo) {
+      bloques.push({ label: "Dirección Empresa", value: accdirnvo });
+    }
+    if (accobs2) {
+      bloques.push({ label: "", value: accobs2 });
+    }
+
+    return bloques;
+  }
+
+  // RESNUM 41 → Teléfono
+  if (resnum === 41) {
+    if (acctelnvo) {
+      return [{ label: "Tel", value: acctelnvo }];
+    }
+    return [];
+  }
+
+  // RESTO
+  if (accobs) bloques.push({ label: "", value: accobs });
+  if (accobs2) bloques.push({ label: "", value: accobs2 });
+  if (acctelnvo) bloques.push({ label: "Tel", value: acctelnvo });
+  if (accdirnvo) bloques.push({ label: "Dir", value: accdirnvo });
+
+  return bloques;
 }
 
 function buildEstadoAccion(restipo) {
@@ -505,13 +573,6 @@ function buildAccionesIndex(rows) {
     const tieneAdjuntoVisible =
       tieneAdjunto && Boolean(accext) && isAdjuntoSoportado(accext);
 
-    const observaciones = [
-      cleanText(row.accobs),
-      cleanText(row.accobs2),
-      cleanText(row.acctelnvo),
-      cleanText(row.accdirnvo),
-    ].filter(Boolean);
-
     map.get(cedula).push({
       accnum: toNumberOrNull(row.accnum),
       cedula,
@@ -523,7 +584,7 @@ function buildAccionesIndex(rows) {
       resnom: cleanText(row.resnom) || "Sin resultado",
       restipo: toNumberOrNull(row.restipo),
       estado: buildEstadoAccion(row.restipo),
-      observacion: observaciones.join(" | "),
+      observacion: buildObservacion(row),
       accext,
       tieneAdjunto,
       tieneAdjuntoVisible,

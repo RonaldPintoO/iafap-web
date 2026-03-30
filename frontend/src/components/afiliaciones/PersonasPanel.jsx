@@ -547,9 +547,20 @@ function DetalleAcciones({
 
               <div className="afi-action-card__state">{accion?.estado || "-"}</div>
 
-              {accion?.observacion ? (
+              {Array.isArray(accion?.observacion) && accion.observacion.length > 0 ? (
                 <div className="afi-action-card__obs">
-                  Observación: {accion.observacion}
+                  {accion.observacion.map((item, i) => (
+                    <div key={i} className="afi-action-card__obs-line">
+                      {item?.label ? (
+                        <>
+                          <span className="afi-action-card__obs-label">{item.label}:</span>{" "}
+                          <span className="afi-action-card__obs-value">{item.value}</span>
+                        </>
+                      ) : (
+                        <span className="afi-action-card__obs-value">{item?.value}</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : null}
 

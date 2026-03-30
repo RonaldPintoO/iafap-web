@@ -3104,6 +3104,25 @@ body{
   word-break: break-word;
 }
 
+.afi-action-card__obs-line{
+  margin-top: 6px;
+}
+
+.afi-action-card__obs-line:first-child{
+  margin-top: 0;
+}
+
+.afi-action-card__obs-label{
+  font-weight: 600;
+  color: #555;
+}
+
+.afi-action-card__obs-value{
+  color: #666;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .afi-action-card__footer{
   margin-top: 12px;
   font-size: clamp(14px, 3.4vw, 18px);
