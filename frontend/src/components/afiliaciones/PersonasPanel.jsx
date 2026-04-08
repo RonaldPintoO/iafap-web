@@ -293,16 +293,23 @@ function PersonaDetalleTabs({ detalleTab, setDetalleTab }) {
 ========================= */
 function DetalleDatos({ item }) {
   const direccionLineas = [
-    [cleanValue(item?.calle), cleanValue(item?.nroPuerta)].filter(Boolean).join(" "),
-    [cleanValue(item?.ciudad), cleanValue(item?.departamento)]
-      .filter(Boolean)
-      .join(" - "),
+    `Calle: ${cleanValue(item?.calle) || "N/D"}`,
+    `Nº: ${cleanValue(item?.nroPuerta) || "N/D"}`,
+    hasValue(item?.entre1) || hasValue(item?.entre2)
+      ? `Esquinas: ${[cleanValue(item?.entre1), cleanValue(item?.entre2)]
+          .filter(Boolean)
+          .join(" y ")}`
+      : "",
+    hasValue(item?.manzana) ? `Manzana: ${cleanValue(item?.manzana)}` : "",
+    hasValue(item?.solar) ? `Solar: ${cleanValue(item?.solar)}` : "",
+    hasValue(item?.ruta) ? `Ruta: ${cleanValue(item?.ruta)}` : "",
+    hasValue(item?.km) ? `Km: ${cleanValue(item?.km)}` : "",
   ].filter(Boolean);
 
   const direccion =
     direccionLineas.length > 0
       ? direccionLineas.join("\n")
-      : cleanValue(item?.direccion) || "Sin dato";
+      : "Sin datos";
 
   const telefonos = [
     cleanValue(item?.telefono),
@@ -378,7 +385,7 @@ function DetalleDatos({ item }) {
             ))
           ) : (
             <div className="afi-detail-phone-row is-empty">
-              <div className="afi-detail-phone-number is-empty">Sin dato</div>
+              <div className="afi-detail-phone-number is-empty">Sin datos</div>
             </div>
           )}
         </div>
@@ -391,42 +398,42 @@ function DetalleDatos({ item }) {
           <div className="afi-detail-info-item">
             <div className="afi-detail-info-label">Departamento</div>
             <div className="afi-detail-info-value">
-              {cleanValue(item?.departamento) || "Sin dato"}
+              {cleanValue(item?.departamento) || "Sin datos"}
             </div>
           </div>
 
           <div className="afi-detail-info-item">
             <div className="afi-detail-info-label">Ciudad</div>
             <div className="afi-detail-info-value">
-              {cleanValue(item?.ciudad) || "Sin dato"}
+              {cleanValue(item?.ciudad) || "Sin datos"}
             </div>
           </div>
 
           <div className="afi-detail-info-item">
             <div className="afi-detail-info-label">Tipo</div>
             <div className="afi-detail-info-value">
-              {cleanValue(item?.asidetalle) || "Sin dato"}
+              {cleanValue(item?.asidetalle) || "Sin datos"}
             </div>
           </div>
 
           <div className="afi-detail-info-item">
             <div className="afi-detail-info-label">Ley</div>
             <div className="afi-detail-info-value">
-              {cleanValue(item?.leyLabel) || "Sin dato"}
+              {cleanValue(item?.leyLabel) || "Sin datos"}
             </div>
           </div>
 
           <div className="afi-detail-info-item">
             <div className="afi-detail-info-label">Estado</div>
             <div className="afi-detail-info-value">
-              {cleanValue(item?.estadoFiltro) || "Sin dato"}
+              {cleanValue(item?.estadoFiltro) || "Sin datos"}
             </div>
           </div>
 
           <div className="afi-detail-info-item">
             <div className="afi-detail-info-label">Tipo afiliación</div>
             <div className="afi-detail-info-value">
-              {cleanValue(item?.leyendaAfiliacion) || "Sin dato"}
+              {cleanValue(item?.leyendaAfiliacion) || "Sin datos"}
             </div>
           </div>
         </div>

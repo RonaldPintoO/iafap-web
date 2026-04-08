@@ -361,6 +361,12 @@ function mapDbRowToSnapshotItem(row, smsItem = null) {
 
     calle: cleanText(row.calle),
     nroPuerta: cleanText(row.nro_puerta),
+    entre1: cleanText(row.entre1),
+    entre2: cleanText(row.entre2),
+    manzana: cleanText(row.manzana),
+    solar: cleanText(row.solar),
+    ruta: cleanText(row.ruta),
+    km: cleanText(row.km),
     direccion: buildDireccion(row.calle, row.nro_puerta),
 
     latitud,
@@ -607,11 +613,11 @@ async function fetchSnapshotRowsFromDb() {
         asi.asenum,
         asi.perci,
         asi.asidetalle
-      FROM dbo.ASGINACIONESCI asi WITH (NOLOCK)
+      FROM [dbo].[ASGINACIONESCI] asi WITH (NOLOCK)
       WHERE asi.asires < 90
         AND EXISTS (
           SELECT 1
-          FROM dbo.ASGINACIONES a WITH (NOLOCK)
+          FROM [dbo].[ASGINACIONES] a WITH (NOLOCK)
           WHERE a.asinum = asi.asinum
             AND a.asihasta > GETDATE()
         )
@@ -639,17 +645,23 @@ async function fetchSnapshotRowsFromDb() {
         p.percel AS celular,
         p.percalle AS calle,
         p.perpuerta AS nro_puerta,
+        p.perentre1 AS entre1,
+        p.perentre2 AS entre2,
+        p.permanzana AS manzana,
+        p.persolar AS solar,
+        p.perruta AS ruta,
+        p.perkm AS km,
         TRY_CAST(p.percorx AS decimal(10,6)) AS latitud,
         TRY_CAST(p.percory AS decimal(10,6)) AS longitud,
         aa.asenum AS asesor_app,
         aa.asidetalle
-      FROM dbo.PERSONA p WITH (NOLOCK)
+      FROM [dbo].[PERSONA] p WITH (NOLOCK)
       INNER JOIN AsignacionesActivas aa
         ON aa.perci = p.perci
        AND aa.asenum > 0
       WHERE NOT EXISTS (
         SELECT 1
-        FROM dbo.ULTIMAACCION uf WITH (NOLOCK)
+        FROM [dbo].[ULTIMAACCION] uf WITH (NOLOCK)
         WHERE uf.perci = p.perci
           AND uf.tipo = 'finalizado'
       )
@@ -668,21 +680,21 @@ async function fetchSnapshotRowsFromDb() {
           WHEN a.resnum = 38
             AND NOT EXISTS (
               SELECT 1
-              FROM dbo.ACCIONES x WITH (NOLOCK)
+              FROM [dbo].[ACCIONES] x WITH (NOLOCK)
               WHERE x.perci = a.perci
                 AND x.acccuando > a.acccuando
                 AND x.resnum NOT IN (25, 36, 38, 40, 41, 42, 43, 44)
             ) THEN 1
           WHEN EXISTS (
             SELECT 1
-            FROM dbo.ACCIONES x WITH (NOLOCK)
+            FROM [dbo].[ACCIONES] x WITH (NOLOCK)
             WHERE x.perci = a.perci
               AND x.resnum NOT IN (25, 36, 38, 40, 41, 42, 43, 44)
           ) THEN 2
           ELSE 3
         END AS prioridad
-      FROM dbo.ACCIONES a WITH (NOLOCK)
-      INNER JOIN dbo.RESULTADOS r WITH (NOLOCK)
+      FROM [dbo].[ACCIONES] a WITH (NOLOCK)
+      INNER JOIN [dbo].[RESULTADOS] r WITH (NOLOCK)
         ON r.resnum = a.resnum
       WHERE a.acccuando >= '2023-01-01'
     ),
@@ -730,6 +742,12 @@ async function fetchSnapshotRowsFromDb() {
         bp.celular,
         bp.calle,
         bp.nro_puerta,
+        bp.entre1,
+        bp.entre2,
+        bp.manzana,
+        bp.solar,
+        bp.ruta,
+        bp.km,
         bp.latitud,
         bp.longitud,
         bp.asesor_app,
@@ -745,9 +763,9 @@ async function fetchSnapshotRowsFromDb() {
       FROM BasePersonas bp
       LEFT JOIN UltimaAccion ua
         ON ua.perci = bp.cedula
-      LEFT JOIN dbo.DOCUMENTO_EXTRANJERO de WITH (NOLOCK)
+      LEFT JOIN [dbo].[DOCUMENTO_EXTRANJERO] de WITH (NOLOCK)
         ON TRY_CAST(de.ci_ficticia AS bigint) = TRY_CAST(bp.cedula AS bigint)
-      LEFT JOIN dbo.PAISES_BPS pb WITH (NOLOCK)
+      LEFT JOIN [dbo].[PAISES_BPS] pb WITH (NOLOCK)
         ON pb.idpais = de.id_pais
     )
     SELECT
@@ -767,6 +785,12 @@ async function fetchSnapshotRowsFromDb() {
       d.celular,
       d.calle,
       d.nro_puerta,
+      d.entre1,
+      d.entre2,
+      d.manzana,
+      d.solar,
+      d.ruta,
+      d.km,
       d.latitud,
       d.longitud,
       d.asesor_app,
@@ -802,19 +826,19 @@ async function fetchSnapshotRowsFromDb() {
         ELSE NULL
       END AS regimen
     FROM DataFinal d
-    LEFT JOIN [2023_AFAP_Gestion].[dbo].[ASESORES_ACTUALES] aa2 WITH (NOLOCK)
+    LEFT JOIN [dbo].[ASESORES_ACTUALES] aa2 WITH (NOLOCK)
       ON TRY_CAST(aa2.numeroAsesor AS int) = TRY_CAST(d.ultima_accion_asesor AS int)
     OUTER APPLY (
       SELECT TOP 1
         ao.regimen
-      FROM dbo.ASIGNACIONES_OFICIOS ao WITH (NOLOCK)
+      FROM [dbo].[ASIGNACIONES_OFICIOS] ao WITH (NOLOCK)
       WHERE TRY_CAST(ao.documento AS bigint) = TRY_CAST(d.cedula AS bigint)
         AND TRY_CAST(ao.id_pais AS int) = 1
     ) aof_nat
     OUTER APPLY (
       SELECT TOP 1
         ao.regimen
-      FROM dbo.ASIGNACIONES_OFICIOS ao WITH (NOLOCK)
+      FROM [dbo].[ASIGNACIONES_OFICIOS] ao WITH (NOLOCK)
       WHERE d.documento_extranjero IS NOT NULL
         AND d.id_pais_extranjero IS NOT NULL
         AND LTRIM(RTRIM(CAST(ao.documento AS varchar(100)))) =
@@ -874,10 +898,10 @@ async function fetchAccionesRowsFromDb() {
           ISNULL(aa.apellido, '')
         )
       )) AS asesor_nombre_completo
-    FROM [2023_AFAP_Gestion].[dbo].[ACCIONES] a WITH (NOLOCK)
-    LEFT JOIN [2023_AFAP_Gestion].[dbo].[RESULTADOS] r WITH (NOLOCK)
+    FROM [dbo].[ACCIONES] a WITH (NOLOCK)
+    LEFT JOIN [dbo].[RESULTADOS] r WITH (NOLOCK)
       ON a.resnum = r.resnum
-    LEFT JOIN [2023_AFAP_Gestion].[dbo].[ASESORES_ACTUALES] aa WITH (NOLOCK)
+    LEFT JOIN [dbo].[ASESORES_ACTUALES] aa WITH (NOLOCK)
       ON TRY_CAST(aa.numeroAsesor AS int) = TRY_CAST(a.asenum AS int)
     WHERE a.acccuando >= '2018-01-01'
     ORDER BY a.perci ASC, a.acccuando DESC, a.accnum DESC
@@ -909,7 +933,7 @@ async function fetchSmsRowsFromDb() {
           PARTITION BY p.perci
           ORDER BY s.smscuando DESC
         ) AS rn
-      FROM dbo.PERSONA p WITH (NOLOCK)
+      FROM [dbo].[PERSONA] p WITH (NOLOCK)
       INNER JOIN SOLOACTIVIDAD.dbo.SMSENTRADALEVEL1 s WITH (NOLOCK)
         ON p.perci = s.smscedula
       INNER JOIN SOLOACTIVIDAD.dbo.CODIGOSRESPUESTA c WITH (NOLOCK)
@@ -1063,10 +1087,10 @@ async function refreshAccionesForDocumento(cedula) {
           ISNULL(aa.apellido, '')
         )
       )) AS asesor_nombre_completo
-    FROM [2023_AFAP_Gestion].[dbo].[ACCIONES] a
-    LEFT JOIN [2023_AFAP_Gestion].[dbo].[RESULTADOS] r
+    FROM [dbo].[ACCIONES] a
+    LEFT JOIN [dbo].[RESULTADOS] r
       ON a.resnum = r.resnum
-    LEFT JOIN [2023_AFAP_Gestion].[dbo].[ASESORES_ACTUALES] aa
+    LEFT JOIN [dbo].[ASESORES_ACTUALES] aa
       ON TRY_CAST(aa.numeroAsesor AS int) = TRY_CAST(a.asenum AS int)
     WHERE a.perci = @cedula
     ORDER BY a.acccuando DESC, a.accnum DESC
@@ -1168,7 +1192,7 @@ async function getAccionPdfAdjunto(accnum) {
       a.perci,
       a.accext,
       a.accadjunto
-    FROM [2023_AFAP_Gestion].[dbo].[ACCIONES] a
+    FROM [dbo].[ACCIONES] a
     WHERE a.accnum = @accnum
       AND a.accadjunto IS NOT NULL
       AND LOWER(LTRIM(RTRIM(ISNULL(a.accext, '')))) IN (
