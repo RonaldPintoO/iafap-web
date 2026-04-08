@@ -8,6 +8,8 @@ const personasRoutes = require("./routes/personas.routes");
 
 const app = express();
 
+const soloCedulaRoutes = require("./routes/soloCedula.routes");
+
 app.use(cors());
 app.use(express.json());
 
@@ -15,6 +17,8 @@ app.use("/health", healthRoutes);
 app.use("/configuracion/asesores", configuracionRoutes);
 app.use("/mapa", mapaRoutes);
 app.use("/personas", personasRoutes);
+
+app.use("/solo-cedula", soloCedulaRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
