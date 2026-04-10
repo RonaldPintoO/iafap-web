@@ -1,4 +1,5 @@
 const personasService = require("../services/personasService");
+const bpsSoapService = require("../services/bpsSoapService");
 
 async function getPersonas(req, res) {
   try {
@@ -136,7 +137,7 @@ async function getAccionAdjuntoPdf(req, res) {
     res.setHeader("Content-Type", adjunto.mimeType);
     res.setHeader(
       "Content-Disposition",
-      `${adjunto.disposition}; filename="${adjunto.filename}"`
+      `${adjunto.disposition}; filename="${adjunto.filename}"`,
     );
 
     return res.send(adjunto.buffer);
@@ -192,6 +193,47 @@ function getSnapshotStatus(req, res) {
   }
 }
 
+async function getTelefonoBps(req, res) {
+  try {
+    const { nroDocumento, paisDocumento, tipoDocumento } = req.body;
+
+    if (!nroDocumento || !paisDocumento || !tipoDocumento) {
+      return res.status(400).json({
+        ok: false,
+        detail: "nroDocumento, paisDocumento y tipoDocumento son obligatorios",
+      });
+    }
+
+    const data = await bpsSoapService.obtenerContactos({
+      personas: [
+        {
+          nroDocumento: String(nroDocumento).trim(),
+          paisDocumento: String(paisDocumento).trim(),
+          tipoDocumento: String(tipoDocumento).trim(),
+        },
+      ],
+    });
+
+    return res.json({
+      ok: true,
+      telefono: data.telefono || "",
+      telefonos: data.telefonos || [],
+      direccion: data.direccion || null,
+      data: data.raw,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+
+    console.error("ERROR getTelefonoBps:", error);
+    console.error("STACK:", error.stack);
+
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error consultando contactos BPS",
+    });
+  }
+}
+
 module.exports = {
   getPersonas,
   getAccionesPersona,
@@ -200,4 +242,5 @@ module.exports = {
   getFiltros,
   refreshSnapshot,
   getSnapshotStatus,
+  getTelefonoBps,
 };

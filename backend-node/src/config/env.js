@@ -27,9 +27,20 @@ module.exports = {
   DB_DATABASE: getRequiredEnv("DB_DATABASE"),
   DB_USER: getEnv("DB_USER", ""),
   DB_PASSWORD: getEnv("DB_PASSWORD", ""),
-  DB_TRUSTED_CONNECTION: getEnv("DB_TRUSTED_CONNECTION", "false").toLowerCase() === "true",
+  DB_TRUSTED_CONNECTION:
+    getEnv("DB_TRUSTED_CONNECTION", "false").toLowerCase() === "true",
   DB_TRUST_SERVER_CERTIFICATE:
     getEnv("DB_TRUST_SERVER_CERTIFICATE", "true").toLowerCase() === "true",
+  BPS_SOAP_URL: getEnv(
+    "BPS_SOAP_URL",
+    "https://scs.bps.gub.uy/wsconsultasexternas-distribucion/services/afaps",
+  ),
+  BPS_SOAP_WSDL: getEnv(
+    "BPS_SOAP_WSDL",
+    "https://scs.bps.gub.uy/wsconsultasexternas-distribucion/services/afaps?wsdl",
+  ),
+  BPS_SOAP_USER: getEnv("BPS_SOAP_USER", ""),
+  BPS_SOAP_PASSWORD: getEnv("BPS_SOAP_PASSWORD", ""),
 
   SNAPSHOT_REFRESH_MINUTES: Number(getEnv("SNAPSHOT_REFRESH_MINUTES", "5")),
 };

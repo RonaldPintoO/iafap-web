@@ -2911,7 +2911,7 @@ body{
 /* TABS */
 .afi-detail-tabs{
   display: grid;
-  grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  grid-template-columns: 1fr 1px 1fr 1px 1fr 1px 1fr;
   align-items: stretch;
   background: #fff;
   border-bottom: 1px solid #e5dede;

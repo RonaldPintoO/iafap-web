@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import ToolbarSelect from "./ToolbarSelect";
 import { API_BASE_URL } from "../../config/api";
-
+import DetalleBps from "./DetalleBps";
 /* =========================
    HELPERS
 ========================= */
@@ -15,6 +16,34 @@ function hasValue(value) {
 
 function onlyDigits(value) {
   return cleanValue(value).replace(/\D+/g, "");
+}
+
+function buildBpsDocumentoPayload(item) {
+  const esExtranjero = Boolean(item?.tieneDocumentoExtranjero);
+
+  if (esExtranjero) {
+    const nroDocumento = cleanValue(item?.documentoExtranjero);
+    const paisDocumento = cleanValue(item?.idPaisExtranjero);
+    const tipoDocumento = cleanValue(item?.tipoDocumentoExtranjero);
+
+    if (nroDocumento && paisDocumento && tipoDocumento) {
+      return {
+        nroDocumento,
+        paisDocumento,
+        tipoDocumento,
+      };
+    }
+  }
+
+  const nroDocumento = onlyDigits(item?.cedula);
+
+  if (!nroDocumento) return null;
+
+  return {
+    nroDocumento,
+    paisDocumento: "1",
+    tipoDocumento: "DO",
+  };
 }
 
 /* =========================
@@ -98,14 +127,7 @@ function PersonaCard({ item, onClick }) {
 /* =========================
    PAGINACION
 ========================= */
-function Pagination({
-  page,
-  totalPages,
-  loading,
-  onPrev,
-  onNext,
-  onGoToPage,
-}) {
+function Pagination({ page, totalPages, loading, onPrev, onNext, onGoToPage }) {
   if (!totalPages || totalPages <= 1) return null;
 
   const maxVisible = 5;
@@ -218,7 +240,8 @@ function PersonaDetalleHeader({ item, onClose }) {
 
   const fechaNac = formatFechaDDMMYYYY(item?.fechaNac);
 
-  const chipTexto = item?.actividadChipTexto || item?.actividadChipLabel || "Consultar";
+  const chipTexto =
+    item?.actividadChipTexto || item?.actividadChipLabel || "Consultar";
   const chipColor = item?.actividadChipColor || "Consultar";
 
   return (
@@ -284,6 +307,14 @@ function PersonaDetalleTabs({ detalleTab, setDetalleTab }) {
       >
         Acciones
       </button>
+      <div className="afi-detail-tab-divider" />
+      <button
+        className={`afi-detail-tab ${detalleTab === "bps" ? "is-active" : ""}`}
+        type="button"
+        onClick={() => setDetalleTab("bps")}
+      >
+        Bps
+      </button>
     </div>
   );
 }
@@ -307,21 +338,20 @@ function DetalleDatos({ item }) {
   ].filter(Boolean);
 
   const direccion =
-    direccionLineas.length > 0
-      ? direccionLineas.join("\n")
-      : "Sin datos";
+    direccionLineas.length > 0 ? direccionLineas.join("\n") : "Sin datos";
 
+  /*
   const telefonos = [
     cleanValue(item?.telefono),
     cleanValue(item?.celular),
   ].filter(Boolean);
 
-  const telefonosLlamables = telefonos
+ const telefonosLlamables = telefonos
     .map((telefono) => ({
       raw: telefono,
       tel: onlyDigits(telefono),
     }))
-    .filter((x) => x.raw);
+    .filter((x) => x.raw);*/
 
   const cedulaSoloDigitos = onlyDigits(item?.cedula);
 
@@ -364,28 +394,42 @@ function DetalleDatos({ item }) {
       </section>
 
       <section className="afi-detail-section">
-        <h3 className="afi-detail-section__title">Teléfonos</h3>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <h3 className="afi-detail-section__title">Teléfonos</h3>
+        </div>
 
         <div className="afi-detail-phone-list">
-          {telefonosLlamables.length > 0 ? (
-            telefonosLlamables.map((telefono, idx) => (
-              <div
-                key={`${telefono.raw}-${idx}`}
-                className="afi-detail-phone-row"
+          {hasValue(item?.telefono) && (
+            <div className="afi-detail-phone-row">
+              <div className="afi-detail-phone-number">{item.telefono}</div>
+              <button
+                type="button"
+                className="afi-detail-link"
+                onClick={() => handleLlamar(item.telefono)}
               >
-                <div className="afi-detail-phone-number">{telefono.raw}</div>
-                <button
-                  type="button"
-                  className="afi-detail-link"
-                  onClick={() => handleLlamar(telefono.raw)}
-                >
-                  LLAMAR
-                </button>
-              </div>
-            ))
-          ) : (
-            <div className="afi-detail-phone-row is-empty">
-              <div className="afi-detail-phone-number is-empty">Sin datos</div>
+                LLAMAR
+              </button>
+            </div>
+          )}
+
+          {hasValue(item?.celular) && (
+            <div className="afi-detail-phone-row">
+              <div className="afi-detail-phone-number">{item.celular}</div>
+              <button
+                type="button"
+                className="afi-detail-link"
+                onClick={() => handleLlamar(item.celular)}
+              >
+                LLAMAR
+              </button>
             </div>
           )}
         </div>
@@ -499,7 +543,7 @@ function DetalleAcciones({
     window.open(
       `${API_BASE_URL}/personas/acciones/${encodeURIComponent(accion.accnum)}/adjunto`,
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   };
 
@@ -535,8 +579,8 @@ function DetalleAcciones({
             accion?.estado === "Finalizado"
               ? "is-finalizado"
               : accion?.estado === "Pendiente"
-              ? "is-pendiente"
-              : "is-desconocido";
+                ? "is-pendiente"
+                : "is-desconocido";
 
           return (
             <article
@@ -552,19 +596,28 @@ function DetalleAcciones({
                 </div>
               </div>
 
-              <div className="afi-action-card__state">{accion?.estado || "-"}</div>
+              <div className="afi-action-card__state">
+                {accion?.estado || "-"}
+              </div>
 
-              {Array.isArray(accion?.observacion) && accion.observacion.length > 0 ? (
+              {Array.isArray(accion?.observacion) &&
+              accion.observacion.length > 0 ? (
                 <div className="afi-action-card__obs">
                   {accion.observacion.map((item, i) => (
                     <div key={i} className="afi-action-card__obs-line">
                       {item?.label ? (
                         <>
-                          <span className="afi-action-card__obs-label">{item.label}:</span>{" "}
-                          <span className="afi-action-card__obs-value">{item.value}</span>
+                          <span className="afi-action-card__obs-label">
+                            {item.label}:
+                          </span>{" "}
+                          <span className="afi-action-card__obs-value">
+                            {item.value}
+                          </span>
                         </>
                       ) : (
-                        <span className="afi-action-card__obs-value">{item?.value}</span>
+                        <span className="afi-action-card__obs-value">
+                          {item?.value}
+                        </span>
                       )}
                     </div>
                   ))}
@@ -573,7 +626,8 @@ function DetalleAcciones({
 
               <div className="afi-action-card__footer">
                 <div className="afi-action-card__footer-text">
-                  Asesor: {accion?.asesorNombreCompleto || accion?.asenum || "-"}
+                  Asesor:{" "}
+                  {accion?.asesorNombreCompleto || accion?.asenum || "-"}
                 </div>
 
                 {accion?.tieneAdjuntoVisible ? (
@@ -606,11 +660,64 @@ function PersonaDetalle({
   accionesPersonaLoading,
   accionesPersonaError,
 }) {
+  const [telefonosBps, setTelefonosBps] = useState([]);
+  const [telefonoBpsLoading, setTelefonoBpsLoading] = useState(false);
+  const [telefonoBpsError, setTelefonoBpsError] = useState("");
+  const [telefonoBpsConsultado, setTelefonoBpsConsultado] = useState(false);
+  const [direccionBps, setDireccionBps] = useState(null);
+
+  useEffect(() => {
+    if (detalleTab === "bps" && !telefonoBpsConsultado) {
+      handleConsultarTelefonoBps();
+    }
+  });
+
+  async function handleConsultarTelefonoBps() {
+    const payload = buildBpsDocumentoPayload(item);
+
+    if (!payload) {
+      setTelefonosBps("");
+      setDireccionBps(null);
+      setTelefonoBpsError("No hay documento válido para consultar BPS");
+      return;
+    }
+
+    try {
+      setTelefonoBpsLoading(true);
+
+      const response = await fetch(`${API_BASE_URL}/personas/telefono-bps`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.detail || "Error BPS");
+      }
+
+      setTelefonosBps(data.telefono || "");
+      setTelefonosBps(Array.isArray(data.telefonos) ? data.telefonos : []);
+      setDireccionBps(data.direccion || null);
+
+      setTelefonoBpsConsultado(true);
+    } catch (error) {
+      setTelefonoBpsError(error.message);
+    } finally {
+      setTelefonoBpsLoading(false);
+    }
+  }
   return (
     <div className="afi-detail">
       <PersonaDetalleHeader item={item} onClose={onClose} />
 
-      <PersonaDetalleTabs detalleTab={detalleTab} setDetalleTab={setDetalleTab} />
+      <PersonaDetalleTabs
+        detalleTab={detalleTab}
+        setDetalleTab={setDetalleTab}
+      />
 
       {detalleTab === "datos" && <DetalleDatos item={item} />}
       {detalleTab === "vinculos" && <DetalleVinculos />}
@@ -619,6 +726,16 @@ function PersonaDetalle({
           accionesPersona={accionesPersona}
           accionesPersonaLoading={accionesPersonaLoading}
           accionesPersonaError={accionesPersonaError}
+        />
+      )}
+      {detalleTab === "bps" && (
+        <DetalleBps
+          telefonosBps={telefonosBps}
+          telefonoBpsLoading={telefonoBpsLoading}
+          telefonoBpsError={telefonoBpsError}
+          telefonoBpsConsultado={telefonoBpsConsultado}
+          direccionBps={direccionBps}
+          onConsultarTelefonoBps={handleConsultarTelefonoBps}
         />
       )}
     </div>

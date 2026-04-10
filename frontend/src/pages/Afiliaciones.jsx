@@ -31,10 +31,10 @@ export default function Afiliaciones() {
   });
 
   const [personasDraftValues, setPersonasDraftValues] = useState(() =>
-    buildDefaultPersonas()
+    buildDefaultPersonas(),
   );
   const [personasAppliedValues, setPersonasAppliedValues] = useState(() =>
-    buildDefaultPersonas()
+    buildDefaultPersonas(),
   );
   const [personasFilterCatalogs, setPersonasFilterCatalogs] = useState({
     tipos: ["Todos"],
@@ -42,7 +42,7 @@ export default function Afiliaciones() {
   });
 
   const [agendadosValues, setAgendadosValues] = useState(() =>
-    buildDefaultAgendados()
+    buildDefaultAgendados(),
   );
 
   const [personasItems, setPersonasItems] = useState([]);
@@ -83,7 +83,8 @@ export default function Afiliaciones() {
   };
 
   const ciOk = personaForm.ci.length > 0 && /^\d+$/.test(personaForm.ci);
-  const telOk = personaForm.telefono === "" || /^\d+$/.test(personaForm.telefono);
+  const telOk =
+    personaForm.telefono === "" || /^\d+$/.test(personaForm.telefono);
   const canSubmit =
     ciOk &&
     telOk &&
@@ -156,7 +157,9 @@ export default function Afiliaciones() {
       edadHasta !== "" &&
       Number(edadDesde) > Number(edadHasta)
     ) {
-      setPersonasFiltrosError("La edad desde no puede ser mayor que la edad hasta");
+      setPersonasFiltrosError(
+        "La edad desde no puede ser mayor que la edad hasta",
+      );
       return;
     }
 
@@ -216,7 +219,7 @@ export default function Afiliaciones() {
         setLocMsg(
           err.code === 3
             ? "Tiempo de espera agotado, reintentando..."
-            : "No se pudo obtener ubicación, reintentando..."
+            : "No se pudo obtener ubicación, reintentando...",
         );
 
         navigator.geolocation.getCurrentPosition(
@@ -241,14 +244,14 @@ export default function Afiliaciones() {
             enableHighAccuracy: false,
             timeout: 20000,
             maximumAge: 600000,
-          }
+          },
         );
       },
       {
         enableHighAccuracy: true,
         timeout: 20000,
         maximumAge: 600000,
-      }
+      },
     );
   };
 
@@ -350,7 +353,7 @@ export default function Afiliaciones() {
         }
 
         const res = await fetch(
-          `${API_BASE_URL}/personas/localidades?asesor=${encodeURIComponent(asesorCodigo)}`
+          `${API_BASE_URL}/personas/localidades?asesor=${encodeURIComponent(asesorCodigo)}`,
         );
 
         if (!res.ok) {
@@ -415,7 +418,9 @@ export default function Afiliaciones() {
           params.set("localidad", topLocValue);
         }
 
-        const res = await fetch(`${API_BASE_URL}/personas/filtros?${params.toString()}`);
+        const res = await fetch(
+          `${API_BASE_URL}/personas/filtros?${params.toString()}`,
+        );
 
         if (!res.ok) {
           throw new Error("No se pudieron cargar los filtros");
@@ -435,7 +440,7 @@ export default function Afiliaciones() {
               ? data.acciones
               : ["Todos"],
         });
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setPersonasFilterCatalogs({
             tipos: ["Todos"],
@@ -536,7 +541,7 @@ export default function Afiliaciones() {
         if (!res.ok) {
           const errorData = await res.json().catch(() => null);
           throw new Error(
-            errorData?.detail || "No se pudo cargar la lista de personas"
+            errorData?.detail || "No se pudo cargar la lista de personas",
           );
         }
 
@@ -572,7 +577,14 @@ export default function Afiliaciones() {
     return () => {
       cancelled = true;
     };
-  }, [tab, personasPage, personasReloadToken, topLocValue, personasAppliedValues]);
+  }, [
+    tab,
+    personasPage,
+    personasReloadToken,
+    topLocValue,
+    personasAppliedValues,
+    personasItems.length,
+  ]);
 
   useEffect(() => {
     setPersonasPage(1);
@@ -593,7 +605,7 @@ export default function Afiliaciones() {
         }
 
         const res = await fetch(
-          `${API_BASE_URL}/personas/${encodeURIComponent(cedula)}/acciones`
+          `${API_BASE_URL}/personas/${encodeURIComponent(cedula)}/acciones`,
         );
 
         if (!res.ok) {

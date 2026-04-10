@@ -1,9 +1,9 @@
-export default function AnalysisList({ title, items }) {
+export default function AnalysisList() {
   return (
     <div className="analysis-body">
-      <div className="analysis-body__title">{title}</div>
+      <div className="analysis-body__title">Analisis</div>
 
-      {items.length === 0 ? (
+      {/*{items.length === 0 ? (
         <div className="analysis-empty">Sin resultados</div>
       ) : (
         <div className="analysis-list">
@@ -14,7 +14,7 @@ export default function AnalysisList({ title, items }) {
             </div>
           ))}
         </div>
-      )}
+      )}*/}
     </div>
   );
 }
