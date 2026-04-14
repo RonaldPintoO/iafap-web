@@ -48,7 +48,7 @@ function buildNombreCompleto(
   primerNombre,
   segundoNombre,
   primerApellido,
-  segundoApellido
+  segundoApellido,
 ) {
   return [
     cleanText(primerNombre),
@@ -93,8 +93,7 @@ function buildFechaAccionTexto(acccuando, asesorNombreCompleto, asenum) {
   if (!acccuando) return "Sin Acción";
 
   const fechaTxt = formatFechaDDMMYYYY(acccuando);
-  const asesorTxt =
-    cleanText(asesorNombreCompleto) || cleanText(asenum);
+  const asesorTxt = cleanText(asesorNombreCompleto) || cleanText(asenum);
 
   if (fechaTxt && asesorTxt) {
     return `Fecha Última Acción ${fechaTxt} Asesor: ${asesorTxt}`;
@@ -293,7 +292,7 @@ function mapDbRowToSnapshotItem(row, smsItem = null) {
     ? buildFechaAccionTexto(
         fechaUltimaAccion,
         asesorUltimaAccionNombreCompleto,
-        asesorUltimaAccion
+        asesorUltimaAccion,
       )
     : "Sin Acción";
 
@@ -338,7 +337,7 @@ function mapDbRowToSnapshotItem(row, smsItem = null) {
       row.primer_nombre,
       row.segundo_nombre,
       row.primer_apellido,
-      row.segundo_apellido
+      row.segundo_apellido,
     ),
 
     primerNombre: cleanText(row.primer_nombre),
@@ -394,7 +393,9 @@ function mapDbRowToSnapshotItem(row, smsItem = null) {
     asignadoOficio,
     regimen,
     cardVariant: buildCardVariant(asignadoOficio, resnomRaw),
-    ultimaAccionTs: fechaUltimaAccion ? new Date(fechaUltimaAccion).getTime() : null,
+    ultimaAccionTs: fechaUltimaAccion
+      ? new Date(fechaUltimaAccion).getTime()
+      : null,
 
     smsResultadoRaw,
     smsResultadoLabel,
@@ -409,10 +410,7 @@ function mapDbRowToSnapshotItem(row, smsItem = null) {
       buildCardVariant(asignadoOficio, resnomRaw) ||
       "consultar",
     actividadChipTexto:
-      heroChipTexto ||
-      smsResultadoLabel ||
-      resnom ||
-      "Consultar",
+      heroChipTexto || smsResultadoLabel || resnom || "Consultar",
   };
 }
 
@@ -857,7 +855,7 @@ async function fetchSnapshotRowsFromDb() {
   const elapsedMs = Date.now() - startedAt;
 
   console.log(
-    `[snapshot] query ok | rows=${result.recordset?.length || 0} | ms=${elapsedMs}`
+    `[snapshot] query ok | rows=${result.recordset?.length || 0} | ms=${elapsedMs}`,
   );
 
   return Array.isArray(result.recordset) ? result.recordset : [];
@@ -912,7 +910,7 @@ async function fetchAccionesRowsFromDb() {
   const elapsedMs = Date.now() - startedAt;
 
   console.log(
-    `[snapshot] acciones query ok | rows=${result.recordset?.length || 0} | ms=${elapsedMs}`
+    `[snapshot] acciones query ok | rows=${result.recordset?.length || 0} | ms=${elapsedMs}`,
   );
 
   return Array.isArray(result.recordset) ? result.recordset : [];
@@ -956,7 +954,7 @@ async function fetchSmsRowsFromDb() {
   const elapsedMs = Date.now() - startedAt;
 
   console.log(
-    `[snapshot] sms query ok | rows=${result.recordset?.length || 0} | ms=${elapsedMs}`
+    `[snapshot] sms query ok | rows=${result.recordset?.length || 0} | ms=${elapsedMs}`,
   );
 
   return Array.isArray(result.recordset) ? result.recordset : [];
@@ -1022,7 +1020,7 @@ async function refreshSnapshot(options = {}) {
       };
 
       console.log(
-        `[snapshot] refresh ok | reason=${reason} | version=${snapshotState.version} | items=${snapshotState.totalItems} | asesores=${snapshotState.totalAsesores}`
+        `[snapshot] refresh ok | reason=${reason} | version=${snapshotState.version} | items=${snapshotState.totalItems} | asesores=${snapshotState.totalAsesores}`,
       );
 
       return snapshotState;
@@ -1034,7 +1032,7 @@ async function refreshSnapshot(options = {}) {
       };
 
       console.error(
-        `[snapshot] refresh error | reason=${reason} | message=${snapshotState.lastError}`
+        `[snapshot] refresh error | reason=${reason} | message=${snapshotState.lastError}`,
       );
 
       throw error;
@@ -1140,6 +1138,299 @@ function getSmsByDocumento(cedula) {
   return snapshotState.smsByDocumento.get(safeCedula) || null;
 }
 
+async function getPersonaDetalleByCedula(cedula) {
+  const safeCedula = cleanText(cedula);
+
+  if (!safeCedula) {
+    throw new Error("El parámetro 'cedula' es obligatorio");
+  }
+
+  const pool = await getPool();
+  const request = pool.request();
+  request.input("cedula", safeCedula);
+
+  const query = `
+    ;WITH AsignacionesActivas AS (
+      SELECT
+        asi.asenum,
+        asi.perci,
+        asi.asidetalle
+      FROM [dbo].[ASGINACIONESCI] asi WITH (NOLOCK)
+      WHERE asi.asires < 90
+        AND EXISTS (
+          SELECT 1
+          FROM [dbo].[ASGINACIONES] a WITH (NOLOCK)
+          WHERE a.asinum = asi.asinum
+            AND a.asihasta > GETDATE()
+        )
+      GROUP BY asi.asenum, asi.perci, asi.asidetalle
+    ),
+    BasePersonas AS (
+      SELECT
+        p.perci AS cedula,
+        p.perprinom AS primer_nombre,
+        p.persegnom AS segundo_nombre,
+        p.perpriape AS primer_apellido,
+        p.persegape AS segundo_apellido,
+        p.perfecnac AS fecha_nac,
+        p.perley AS perley,
+        p.persexo AS persexo,
+        CASE
+          WHEN YEAR(p.perfecnac) > 1900
+            THEN FLOOR((CAST(GETDATE() AS float) - CAST(p.perfecnac AS float)) / 365.25)
+          ELSE 0
+        END AS edad,
+        p.perdepto AS departamento,
+        p.perpostal AS cp,
+        p.perciudad AS ciudad,
+        p.pertel AS telefono,
+        p.percel AS celular,
+        p.percalle AS calle,
+        p.perpuerta AS nro_puerta,
+        p.perentre1 AS entre1,
+        p.perentre2 AS entre2,
+        p.permanzana AS manzana,
+        p.persolar AS solar,
+        p.perruta AS ruta,
+        p.perkm AS km,
+        TRY_CAST(p.percorx AS decimal(10,6)) AS latitud,
+        TRY_CAST(p.percory AS decimal(10,6)) AS longitud,
+        aa.asenum AS asesor_app,
+        aa.asidetalle
+      FROM [dbo].[PERSONA] p WITH (NOLOCK)
+      LEFT JOIN AsignacionesActivas aa
+        ON aa.perci = p.perci
+      WHERE p.perci = @cedula
+    ),
+    AccionesEvaluadas AS (
+      SELECT
+        a.perci,
+        a.accnum,
+        a.acccuando,
+        a.accobs,
+        a.asenum,
+        a.resnum,
+        r.resnom,
+        r.restipo,
+        CASE
+          WHEN a.resnum = 38
+            AND NOT EXISTS (
+              SELECT 1
+              FROM [dbo].[ACCIONES] x WITH (NOLOCK)
+              WHERE x.perci = a.perci
+                AND x.acccuando > a.acccuando
+                AND x.resnum NOT IN (25, 36, 38, 40, 41, 42, 43, 44)
+            ) THEN 1
+          WHEN EXISTS (
+            SELECT 1
+            FROM [dbo].[ACCIONES] x WITH (NOLOCK)
+            WHERE x.perci = a.perci
+              AND x.resnum NOT IN (25, 36, 38, 40, 41, 42, 43, 44)
+          ) THEN 2
+          ELSE 3
+        END AS prioridad
+      FROM [dbo].[ACCIONES] a WITH (NOLOCK)
+      INNER JOIN [dbo].[RESULTADOS] r WITH (NOLOCK)
+        ON r.resnum = a.resnum
+      WHERE a.perci = @cedula
+        AND a.acccuando >= '2023-01-01'
+    ),
+    AccionesPriorizadas AS (
+      SELECT
+        ae.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY ae.perci
+          ORDER BY ae.prioridad, ae.acccuando DESC
+        ) AS rn
+      FROM AccionesEvaluadas ae
+    ),
+    UltimaAccion AS (
+      SELECT
+        perci,
+        accnum,
+        acccuando AS ultima_accion_fecha,
+        resnom AS ultima_accion_resnom,
+        restipo AS ultima_accion_restipo,
+        asenum AS ultima_accion_asesor,
+        CASE
+          WHEN restipo = 1 THEN 'Finalizado'
+          ELSE 'Pendiente'
+        END AS tipo
+      FROM AccionesPriorizadas
+      WHERE rn = 1
+    ),
+    DataFinal AS (
+      SELECT
+        bp.cedula,
+        bp.primer_nombre,
+        bp.segundo_nombre,
+        bp.primer_apellido,
+        bp.segundo_apellido,
+        bp.fecha_nac,
+        bp.perley,
+        bp.persexo,
+        bp.edad,
+        bp.departamento,
+        bp.cp,
+        bp.ciudad,
+        bp.telefono,
+        bp.celular,
+        bp.calle,
+        bp.nro_puerta,
+        bp.entre1,
+        bp.entre2,
+        bp.manzana,
+        bp.solar,
+        bp.ruta,
+        bp.km,
+        bp.latitud,
+        bp.longitud,
+        bp.asesor_app,
+        bp.asidetalle,
+        ua.ultima_accion_fecha,
+        ua.ultima_accion_resnom,
+        ua.ultima_accion_restipo,
+        ua.ultima_accion_asesor,
+        de.tipo_documento AS tipo_documento_extranjero,
+        de.id_pais AS id_pais_extranjero,
+        de.documento AS documento_extranjero,
+        pb.nombre AS pais_extranjero
+      FROM BasePersonas bp
+      LEFT JOIN UltimaAccion ua
+        ON ua.perci = bp.cedula
+      LEFT JOIN [dbo].[DOCUMENTO_EXTRANJERO] de WITH (NOLOCK)
+        ON TRY_CAST(de.ci_ficticia AS bigint) = TRY_CAST(bp.cedula AS bigint)
+      LEFT JOIN [dbo].[PAISES_BPS] pb WITH (NOLOCK)
+        ON pb.idpais = de.id_pais
+    )
+    SELECT TOP 1
+      d.cedula,
+      d.primer_nombre,
+      d.segundo_nombre,
+      d.primer_apellido,
+      d.segundo_apellido,
+      d.fecha_nac,
+      d.perley,
+      d.persexo,
+      d.edad,
+      d.departamento,
+      d.cp,
+      d.ciudad,
+      d.telefono,
+      d.celular,
+      d.calle,
+      d.nro_puerta,
+      d.entre1,
+      d.entre2,
+      d.manzana,
+      d.solar,
+      d.ruta,
+      d.km,
+      d.latitud,
+      d.longitud,
+      d.asesor_app,
+      d.asidetalle,
+      d.ultima_accion_fecha,
+      d.ultima_accion_resnom,
+      d.ultima_accion_restipo,
+      d.ultima_accion_asesor,
+      d.tipo_documento_extranjero,
+      d.id_pais_extranjero,
+      d.documento_extranjero,
+      d.pais_extranjero,
+      aa2.nombre AS asesor_nombre,
+      aa2.apellido AS asesor_apellido,
+      LTRIM(RTRIM(
+        CONCAT(
+          ISNULL(aa2.nombre, ''),
+          CASE
+            WHEN ISNULL(aa2.nombre, '') <> '' AND ISNULL(aa2.apellido, '') <> '' THEN ' '
+            ELSE ''
+          END,
+          ISNULL(aa2.apellido, '')
+        )
+      )) AS asesor_nombre_completo,
+      CASE
+        WHEN aof_ext.regimen IS NOT NULL THEN 1
+        WHEN aof_nat.regimen IS NOT NULL THEN 1
+        ELSE 0
+      END AS asignado_oficio,
+      CASE
+        WHEN aof_ext.regimen IS NOT NULL THEN aof_ext.regimen
+        WHEN aof_nat.regimen IS NOT NULL THEN aof_nat.regimen
+        ELSE NULL
+      END AS regimen
+    FROM DataFinal d
+    LEFT JOIN [dbo].[ASESORES_ACTUALES] aa2 WITH (NOLOCK)
+      ON TRY_CAST(aa2.numeroAsesor AS int) = TRY_CAST(d.ultima_accion_asesor AS int)
+    OUTER APPLY (
+      SELECT TOP 1 ao.regimen
+      FROM [dbo].[ASIGNACIONES_OFICIOS] ao WITH (NOLOCK)
+      WHERE TRY_CAST(ao.documento AS bigint) = TRY_CAST(d.cedula AS bigint)
+        AND TRY_CAST(ao.id_pais AS int) = 1
+    ) aof_nat
+    OUTER APPLY (
+      SELECT TOP 1 ao.regimen
+      FROM [dbo].[ASIGNACIONES_OFICIOS] ao WITH (NOLOCK)
+      WHERE d.documento_extranjero IS NOT NULL
+        AND d.id_pais_extranjero IS NOT NULL
+        AND LTRIM(RTRIM(CAST(ao.documento AS varchar(100)))) =
+            LTRIM(RTRIM(CAST(d.documento_extranjero AS varchar(100))))
+        AND TRY_CAST(ao.id_pais AS int) = TRY_CAST(d.id_pais_extranjero AS int)
+    ) aof_ext
+  `;
+
+  const result = await request.query(query);
+  const row = Array.isArray(result.recordset) ? result.recordset[0] : null;
+
+  if (!row) {
+    return null;
+  }
+
+  let smsItem = getSmsByDocumento(safeCedula);
+
+  if (!smsItem) {
+    const smsRequest = pool.request();
+    smsRequest.input("cedula", safeCedula);
+
+    const smsQuery = `
+      ;WITH UltimoSms AS (
+        SELECT
+          p.perci AS cedula,
+          s.smscuando AS fecha_consulta,
+          c.coddes AS resultado,
+          ROW_NUMBER() OVER (
+            PARTITION BY p.perci
+            ORDER BY s.smscuando DESC
+          ) AS rn
+        FROM [dbo].[PERSONA] p WITH (NOLOCK)
+        INNER JOIN SOLOACTIVIDAD.dbo.SMSENTRADALEVEL1 s WITH (NOLOCK)
+          ON p.perci = s.smscedula
+        INNER JOIN SOLOACTIVIDAD.dbo.CODIGOSRESPUESTA c WITH (NOLOCK)
+          ON s.smsresultado = c.codnum
+        WHERE p.perci = @cedula
+      )
+      SELECT cedula, fecha_consulta, resultado
+      FROM UltimoSms
+      WHERE rn = 1
+    `;
+
+    const smsResult = await smsRequest.query(smsQuery);
+    const smsRow = Array.isArray(smsResult.recordset)
+      ? smsResult.recordset[0]
+      : null;
+
+    if (smsRow) {
+      smsItem = buildSmsIndex([smsRow]).get(safeCedula) || null;
+      if (smsItem) {
+        snapshotState.smsByDocumento.set(safeCedula, smsItem);
+      }
+    }
+  }
+
+  return mapDbRowToSnapshotItem(row, smsItem || null);
+}
+
 async function getPersonasPage({ asesor, page = 1, pageSize = MAX_PAGE_SIZE }) {
   await ensureSnapshotReady();
 
@@ -1155,8 +1446,7 @@ async function getPersonasPage({ asesor, page = 1, pageSize = MAX_PAGE_SIZE }) {
   const total = asesorItems.length;
   const totalPages = total > 0 ? Math.ceil(total / currentPageSize) : 0;
 
-  const normalizedPage =
-    totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
+  const normalizedPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
 
   const start = (normalizedPage - 1) * currentPageSize;
   const end = start + currentPageSize;
@@ -1206,7 +1496,9 @@ async function getAccionPdfAdjunto(accnum) {
   const row = Array.isArray(result.recordset) ? result.recordset[0] : null;
 
   if (!row) {
-    const error = new Error("La acción no tiene un adjunto compatible disponible");
+    const error = new Error(
+      "La acción no tiene un adjunto compatible disponible",
+    );
     error.statusCode = 404;
     throw error;
   }
@@ -1282,6 +1574,7 @@ module.exports = {
   refreshAccionesForDocumento,
   getAccionPdfAdjunto,
   getPersonasPage,
+  getPersonaDetalleByCedula,
   startAutoRefresh,
   stopAutoRefresh,
 };
