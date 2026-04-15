@@ -234,6 +234,28 @@ async function getTelefonoBps(req, res) {
   }
 }
 
+async function getFormularioFoto(req, res) {
+  try {
+    const { cedula } = req.params;
+    const foto = await personasService.getFormularioFoto({ cedula });
+
+    res.setHeader("Content-Type", foto.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `${foto.disposition}; filename="${foto.filename}"`
+    );
+
+    return res.send(foto.buffer);
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error obteniendo formulario",
+    });
+  }
+}
+
 module.exports = {
   getPersonas,
   getAccionesPersona,
@@ -243,4 +265,5 @@ module.exports = {
   refreshSnapshot,
   getSnapshotStatus,
   getTelefonoBps,
+  getFormularioFoto,
 };

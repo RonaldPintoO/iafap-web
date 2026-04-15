@@ -1,5 +1,8 @@
 const snapshotService = require("./snapshotService");
 
+const sql = require("mssql");
+const { getPool } = require("../config/database");
+
 function cleanText(value) {
   if (value === null || value === undefined) return "";
   return String(value).trim();
@@ -38,6 +41,100 @@ function filterItemsByLocalidad(items, localidad) {
   }
 
   return items.filter((item) => normalizeText(item.ciudad) === localidadNorm);
+}
+
+function detectImageMime(buffer) {
+  if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 12) {
+    return "application/octet-stream";
+  }
+
+  // JPEG
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+
+  // PNG
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return "image/png";
+  }
+
+  // HEIF / HEIC
+  // ISO BMFF: bytes 4-7 = "ftyp", brand típico: heic/heif/mif1/msf1
+  const boxType = buffer.slice(4, 8).toString("ascii");
+  const brand = buffer.slice(8, 12).toString("ascii").toLowerCase();
+
+  if (
+    boxType === "ftyp" &&
+    ["heic", "heix", "hevc", "hevx", "heif", "mif1", "msf1"].includes(brand)
+  ) {
+    return "image/heif";
+  }
+
+  return "application/octet-stream";
+}
+
+function getExtensionFromMime(mimeType) {
+  switch (mimeType) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/heif":
+      return "heif";
+    default:
+      return "bin";
+  }
+}
+
+async function getFormularioFoto({ cedula }) {
+  const cedulaTxt = String(cedula || "").trim();
+
+  if (!cedulaTxt) {
+    const error = new Error("Cédula requerida");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("cedula", sql.VarChar(20), cedulaTxt)
+    .query(`
+      SELECT TOP (1)
+        forci,
+        forfoto
+      FROM [afapformularios].[dbo].[FORMULAR]
+      WHERE LTRIM(RTRIM(CONVERT(VARCHAR(20), forci))) = @cedula
+        AND forfoto IS NOT NULL
+    `);
+
+  const row = result.recordset?.[0];
+
+  if (!row || !row.forfoto) {
+    const error = new Error("No hay formulario disponible para esta persona");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const buffer = Buffer.isBuffer(row.forfoto)
+    ? row.forfoto
+    : Buffer.from(row.forfoto);
+
+  const mimeType = detectImageMime(buffer);
+  const extension = getExtensionFromMime(mimeType);
+
+  return {
+    buffer,
+    mimeType,
+    filename: `formulario_${cedulaTxt}.${extension}`,
+    disposition: "inline",
+  };
 }
 
 function matchTexto(item, texto) {
@@ -366,4 +463,5 @@ module.exports = {
   getAccionesPersona,
   getAccionAdjuntoPdf,
   getPersonasSnapshotStatus,
+  getFormularioFoto,
 };

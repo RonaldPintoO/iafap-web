@@ -2910,11 +2910,19 @@ body{
 
 /* TABS */
 .afi-detail-tabs{
-  display: grid;
-  grid-template-columns: 1fr 1px 1fr 1px 1fr 1px 1fr;
+  display: flex;
   align-items: stretch;
   background: #fff;
   border-bottom: 1px solid #e5dede;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.afi-detail-tabs::-webkit-scrollbar{
+  display: none;
 }
 
 .afi-detail-tab{
@@ -2923,10 +2931,14 @@ body{
   background: #fff;
   color: #b61c1c;
   font-weight: 700;
-  padding: 15px 8px;
+  padding: 15px 10px;
   position: relative;
   cursor: pointer;
-  font-size: clamp(14px, 3.9vw, 22px);
+  font-size: clamp(14px, 3.7vw, 22px);
+  text-align: center;
+  white-space: nowrap;
+
+  flex: 0 0 auto;
 }
 
 .afi-detail-tab.is-active::after{
@@ -2942,6 +2954,29 @@ body{
 .afi-detail-tab-divider{
   width: 1px;
   background: #ece5e5;
+  flex: 0 0 1px;
+}
+
+/* MOBILE */
+@media (max-width: 520px){
+  .afi-detail-tab{
+    flex: 1 1 auto;
+    min-width: 62px;
+    padding: 14px 6px;
+    font-size: 12px;
+  }
+}
+
+/* DESKTOP */
+@media (min-width: 1024px){
+  .afi-detail-tabs{
+    overflow-x: hidden;
+  }
+
+  .afi-detail-tab{
+    flex: 1 1 0;
+    padding: 15px 12px;
+  }
 }
 
 /* BODY */
@@ -3264,4 +3299,33 @@ body{
   .afi-detail-quick-actions{
     gap: 14px 18px;
   }
+}
+
+/* pestaña formulario muestra la imagen del formulario si la tenemos */
+.afi-formulario-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.afi-formulario-card {
+  width: 100%;
+  min-height: 320px;
+  border: 1px solid #e6e8ef;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+  overflow: auto;
+}
+
+.afi-formulario-card-clickable {
+  cursor: zoom-in;
+}
+
+.afi-formulario-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 10px;
 }

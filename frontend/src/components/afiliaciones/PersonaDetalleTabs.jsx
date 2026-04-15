@@ -4,7 +4,8 @@ const DEFAULT_TABS = [
   { value: "datos", label: "Datos" },
   { value: "vinculos", label: "Vínculos" },
   { value: "acciones", label: "Acciones" },
-  { value: "bps", label: "Bps" },
+  { value: "bps", label: "BPS" },
+  { value: "formulario", label: "Formulario" },
 ];
 
 export default function PersonaDetalleTabs({
@@ -20,8 +21,8 @@ export default function PersonaDetalleTabs({
       {tabs.map((tab, index) => (
         <Fragment key={tab.value}>
           <button
-            className={`${tabClassName} ${value === tab.value ? "is-active" : ""}`}
             type="button"
+            className={`${tabClassName} ${value === tab.value ? "is-active" : ""}`}
             onClick={() => onChange(tab.value)}
           >
             {tab.label}
