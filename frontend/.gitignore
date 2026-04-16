@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sistema
+$RECYCLE.BIN/
+Thumbs.db
+.DS_Store
