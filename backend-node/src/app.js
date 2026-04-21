@@ -5,20 +5,21 @@ const healthRoutes = require("./routes/health.routes");
 const configuracionRoutes = require("./routes/configuracion.routes");
 const mapaRoutes = require("./routes/mapa.routes");
 const personasRoutes = require("./routes/personas.routes");
+const soloCedulaRoutes = require("./routes/soloCedula.routes");
+const authRoutes = require("./routes/auth.routes");
+const requireAuth = require("./middleware/requireAuth");
 
 const app = express();
-
-const soloCedulaRoutes = require("./routes/soloCedula.routes");
 
 app.use(cors());
 app.use(express.json());
 
 app.use("/health", healthRoutes);
-app.use("/configuracion/asesores", configuracionRoutes);
-app.use("/mapa", mapaRoutes);
-app.use("/personas", personasRoutes);
-
-app.use("/solo-cedula", soloCedulaRoutes);
+app.use("/auth", authRoutes);
+app.use("/configuracion/asesores", requireAuth, configuracionRoutes);
+app.use("/mapa", requireAuth, mapaRoutes);
+app.use("/personas", requireAuth, personasRoutes);
+app.use("/solo-cedula", requireAuth, soloCedulaRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

@@ -1,5 +1,5 @@
+import { authFetch } from '../components/auth/auth.api';
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../config/api";
 
 function cleanValue(value) {
   if (value === null || value === undefined) return "";
@@ -71,7 +71,7 @@ export default function useDetalleBps(item, detalleTab) {
       setTelefonoBpsLoading(true);
       setTelefonoBpsError("");
 
-      const response = await fetch(`${API_BASE_URL}/personas/telefono-bps`, {
+      const response = await authFetch(`/personas/bps`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

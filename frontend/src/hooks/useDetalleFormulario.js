@@ -1,5 +1,5 @@
+import { authFetch } from '../components/auth/auth.api';
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../config/api";
 
 function cleanValue(value) {
   if (value === null || value === undefined) return "";
@@ -58,9 +58,7 @@ export default function useDetalleFormulario(item, detalleTab) {
       setFormularioLoading(true);
       setFormularioError("");
 
-      const response = await fetch(
-        `${API_BASE_URL}/personas/${encodeURIComponent(cedula)}/formulario`,
-      );
+      const response = await authFetch(`/personas/${encodeURIComponent(cedula)}/formulario`);
 
       if (response.status === 404) {
         setFormularioDisponible(false);

@@ -9,7 +9,12 @@ import Formularios from "./pages/Formularios.jsx";
 import Proyectos from "./pages/Proyectos.jsx";
 import Estadisticas from "./pages/Estadisticas.jsx";
 import Configuracion from "./pages/Configuracion.jsx";
+import Login from "./pages/Login.jsx";
+import RequireAuth from "./components/auth/RequireAuth.jsx";
 import { getConfiguracionGuardada } from "./components/configuracion/configuracion.utils";
+import { getAuthSession } from "./components/auth/auth.storage.js";
+import { logoutAsesor } from "./components/auth/auth.api.js";
+import useInactivityLogout from "./hooks/useInactivityLogout.js";
 
 const MENU = [
   { key: "inicio", label: "Inicio", icon: "home", path: "/" },
@@ -23,11 +28,32 @@ const MENU = [
   { key: "config", label: "Configuración", icon: "settings", path: "/configuracion" },
 ];
 
+function ProtectedRoute({ children }) {
+  return <RequireAuth>{children}</RequireAuth>;
+}
+
 export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAuthSession()?.token));
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  useInactivityLogout(isAuthenticated && location.pathname !== '/login');
+
+  useEffect(() => {
+    const syncAuthState = () => setIsAuthenticated(Boolean(getAuthSession()?.token));
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener('auth:expired', syncAuthState);
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener('auth:expired', syncAuthState);
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsAuthenticated(Boolean(getAuthSession()?.token));
+  }, [location.pathname]);
 
   const activeItem = useMemo(() => {
     return MENU.find((m) => m.path === location.pathname) ?? MENU[0];
@@ -49,85 +75,108 @@ export default function App() {
     closeDrawer();
   };
 
+  const handleLogout = async () => {
+    await logoutAsesor();
+    setIsAuthenticated(false);
+    closeDrawer();
+    navigate('/login', { replace: true });
+  };
+
   const asesorGuardado = getConfiguracionGuardada()?.asesorCodigo;
+  const showShell = location.pathname !== '/login';
 
   return (
     <>
-      <header className="topbar topbar--mobile-logo">
-        <button
-          className="icon-btn topbar__menu"
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Abrir menú"
-        >
-          <span className="material-symbols-outlined">menu</span>
-        </button>
-
-        <div className="topbar__brand" aria-label="Integración AFAP">
-          <img
-            src="/Colores-horizontal-01.png"
-            alt="Integración AFAP"
-            className="topbar__logo"
-          />
-        </div>
-      </header>
-
-      <div className="overlay" hidden={!drawerOpen} onClick={closeDrawer} />
-
-      <aside className={`drawer ${drawerOpen ? "is-open" : ""}`} aria-label="Menú">
-        <div className="drawer__header">
-          <div className="brand--logo-only">
-            <img
-              src="/Colores-horizontal-01.png"
-              alt="Integración AFAP"
-              className="brand__logo-full"
-            />
-          </div>
-
-          <div className="meta">
-            <div>Id: 5305c879363a050a</div>
-            <div>Versión Web 1.0</div>
-          </div>
-        </div>
-
-        <nav className="menu">
-          {MENU.map((item) => (
-            <a
-              key={item.key}
-              className={`menu__item ${activeItem.key === item.key ? "is-active" : ""}`}
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                handleMenuClick(item.path);
-              }}
+      {showShell ? (
+        <>
+          <header className="topbar topbar--mobile-logo">
+            <button
+              className="icon-btn topbar__menu"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Abrir menú"
             >
-              <span className="menu__icon material-symbols-outlined">{item.icon}</span>
-              <span className="menu__label">{item.label}</span>
-            </a>
-          ))}
-        </nav>
-      </aside>
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+
+            <div className="topbar__brand" aria-label="Integración AFAP">
+              <img
+                src="/Colores-horizontal-01.png"
+                alt="Integración AFAP"
+                className="topbar__logo"
+              />
+            </div>
+          </header>
+
+          <div className="overlay" hidden={!drawerOpen} onClick={closeDrawer} />
+
+          <aside className={`drawer ${drawerOpen ? "is-open" : ""}`} aria-label="Menú">
+            <div className="drawer__header">
+              <div className="brand--logo-only">
+                <img
+                  src="/Colores-horizontal-01.png"
+                  alt="Integración AFAP"
+                  className="brand__logo-full"
+                />
+              </div>
+
+              <div className="meta">
+                <div>Versión Web 1.0</div>
+                <div>{isAuthenticated ? 'Sesión activa' : 'Sin sesión'}</div>
+              </div>
+            </div>
+
+            <nav className="menu">
+              {MENU.map((item) => (
+                <a
+                  key={item.key}
+                  className={`menu__item ${activeItem.key === item.key ? "is-active" : ""}`}
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleMenuClick(item.path);
+                  }}
+                >
+                  <span className="menu__icon material-symbols-outlined">{item.icon}</span>
+                  <span className="menu__label">{item.label}</span>
+                </a>
+              ))}
+            </nav>
+
+            {isAuthenticated ? (
+              <div className="drawer__footer">
+                <button type="button" className="drawer__logout" onClick={handleLogout}>
+                  <span className="material-symbols-outlined">logout</span>
+                  <span>Cerrar sesión</span>
+                </button>
+              </div>
+            ) : null}
+          </aside>
+        </>
+      ) : null}
 
       <main className="main">
         <Routes>
           <Route
             path="/"
             element={
-              asesorGuardado ? (
-                <Navigate to="/afiliaciones" replace />
+              isAuthenticated ? (
+                asesorGuardado ? <Navigate to="/afiliaciones" replace /> : <Navigate to="/configuracion" replace />
               ) : (
-                <Navigate to="/configuracion" replace />
+                <Navigate to="/login" replace />
               )
             }
           />
 
-          <Route path="/actividad" element={<Actividad />} />
-          <Route path="/cedula" element={<SoloCedula />} />
-          <Route path="/afiliaciones" element={<Afiliaciones />} />
-          <Route path="/analisis" element={<Analisis />} />
-          <Route path="/formularios" element={<Formularios />} />
-          <Route path="/proyectos" element={<Proyectos />} />
-          <Route path="/estadisticas" element={<Estadisticas />} />
-          <Route path="/configuracion" element={<Configuracion />} />
+          <Route path="/login" element={<Login />} />
+
+          <Route path="/actividad" element={<ProtectedRoute><Actividad /></ProtectedRoute>} />
+          <Route path="/cedula" element={<ProtectedRoute><SoloCedula /></ProtectedRoute>} />
+          <Route path="/afiliaciones" element={<ProtectedRoute><Afiliaciones /></ProtectedRoute>} />
+          <Route path="/analisis" element={<ProtectedRoute><Analisis /></ProtectedRoute>} />
+          <Route path="/formularios" element={<ProtectedRoute><Formularios /></ProtectedRoute>} />
+          <Route path="/proyectos" element={<ProtectedRoute><Proyectos /></ProtectedRoute>} />
+          <Route path="/estadisticas" element={<ProtectedRoute><Estadisticas /></ProtectedRoute>} />
+          <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
         </Routes>
       </main>
     </>

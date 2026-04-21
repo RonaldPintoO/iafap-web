@@ -1,5 +1,5 @@
+import { authFetch } from '../components/auth/auth.api';
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../config/api";
 import PersonaDetalle from "../components/afiliaciones/PersonaDetalle";
 
 function onlyDigitsInput(value) {
@@ -41,7 +41,7 @@ export default function SoloCedula() {
     setAccionesPersonaError("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/solo-cedula/${cedula}`);
+      const response = await authFetch(`/solo-cedula/${cedula}`);
       const json = await response.json();
       console.log(json.data);
 
@@ -72,9 +72,7 @@ export default function SoloCedula() {
       setAccionesPersonaError("");
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/personas/${encodeURIComponent(persona.cedula)}/acciones`,
-        );
+        const response = await authFetch(`/personas/${encodeURIComponent(persona.cedula)}/acciones`);
         const json = await response.json();
 
         if (!response.ok || !json?.ok) {

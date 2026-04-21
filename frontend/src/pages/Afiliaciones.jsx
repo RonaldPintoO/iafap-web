@@ -12,7 +12,7 @@ import {
   buildDefaultAgendados,
 } from "../components/afiliaciones/afiliaciones.utils";
 import { getConfiguracionGuardada } from "../components/configuracion/configuracion.utils";
-import { API_BASE_URL } from "../config/api";
+import { apiFetch } from "../config/api";
 
 export default function Afiliaciones() {
   const [tab, setTab] = useState("personas");
@@ -132,7 +132,7 @@ export default function Afiliaciones() {
     setShowFilters(false);
     handleClosePersonaDetalle();
 
-    fetch(`${API_BASE_URL}/personas/snapshot/refresh`, {
+    apiFetch(`/personas/snapshot/refresh`, {
       method: "POST",
     }).catch((err) => {
       console.error("No se pudo refrescar snapshot de personas:", err);
@@ -352,8 +352,8 @@ export default function Afiliaciones() {
           return;
         }
 
-        const res = await fetch(
-          `${API_BASE_URL}/personas/localidades?asesor=${encodeURIComponent(asesorCodigo)}`,
+        const res = await apiFetch(
+          `/personas/localidades?asesor=${encodeURIComponent(asesorCodigo)}`
         );
 
         if (!res.ok) {
@@ -418,8 +418,8 @@ export default function Afiliaciones() {
           params.set("localidad", topLocValue);
         }
 
-        const res = await fetch(
-          `${API_BASE_URL}/personas/filtros?${params.toString()}`,
+        const res = await apiFetch(
+          `/personas/filtros?${params.toString()}`
         );
 
         if (!res.ok) {
@@ -535,8 +535,8 @@ export default function Afiliaciones() {
           params.set("ley", personasAppliedValues.ley);
         }
 
-        const url = `${API_BASE_URL}/personas?${params.toString()}`;
-        const res = await fetch(url);
+        const url = `/personas?${params.toString()}`;
+        const res = await apiFetch(url);
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => null);
@@ -604,8 +604,8 @@ export default function Afiliaciones() {
           setAccionesPersonaError("");
         }
 
-        const res = await fetch(
-          `${API_BASE_URL}/personas/${encodeURIComponent(cedula)}/acciones`,
+        const res = await apiFetch(
+          `/personas/${encodeURIComponent(cedula)}/acciones`
         );
 
         if (!res.ok) {
@@ -675,9 +675,9 @@ export default function Afiliaciones() {
         }
 
         const queryString = params.toString();
-        const url = `${API_BASE_URL}/mapa${queryString ? `?${queryString}` : ""}`;
+        const url = `/mapa${queryString ? `?${queryString}` : ""}`;
 
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         if (!res.ok) throw new Error("No se pudo cargar el mapa");
 
         const data = await res.json();

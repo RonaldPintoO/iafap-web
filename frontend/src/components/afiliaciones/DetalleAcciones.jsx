@@ -1,18 +1,29 @@
-import { API_BASE_URL } from "../../config/api";
+import { apiFetch } from "../../config/api";
 
 export default function DetalleAcciones({
   accionesPersona,
   accionesPersonaLoading,
   accionesPersonaError,
 }) {
-  const handleOpenAdjunto = (accion) => {
+  const handleOpenAdjunto = async (accion) => {
     if (!accion?.accnum || !accion?.tieneAdjuntoVisible) return;
 
-    window.open(
-      `${API_BASE_URL}/personas/acciones/${encodeURIComponent(accion.accnum)}/adjunto`,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    try {
+      const response = await apiFetch(
+        `/personas/acciones/${encodeURIComponent(accion.accnum)}/adjunto`,
+      );
+
+      if (!response.ok) {
+        throw new Error('No se pudo abrir el adjunto');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      window.alert(error.message || 'No se pudo abrir el adjunto');
+    }
   };
 
   if (accionesPersonaLoading) {

@@ -5,7 +5,7 @@ import {
   getConfiguracionGuardada,
   saveConfiguracion,
 } from "../components/configuracion/configuracion.utils";
-import { API_BASE_URL } from "../config/api";
+import { authFetch } from "../components/auth/auth.api";
 
 export default function Configuracion() {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export default function Configuracion() {
         setLoading(true);
         setError("");
 
-        const res = await fetch(`${API_BASE_URL}/configuracion/asesores`);
+        const res = await authFetch(`/configuracion/asesores`);
         if (!res.ok) throw new Error("No se pudo cargar la configuración");
 
         const data = await res.json();
@@ -78,11 +78,11 @@ export default function Configuracion() {
 
       <div className="cfg-content">
         <ConfigSelectField
-          label="Asesor"
+          label="Usuario de trabajo"
           value={asesor}
           options={options}
           onChange={setAsesor}
-          ariaLabel="Asesor"
+          ariaLabel="Usuario de trabajo"
         />
 
         <div className="cfg-actions">
@@ -96,7 +96,7 @@ export default function Configuracion() {
           </button>
         </div>
 
-        {loading && <div style={{ marginTop: 12 }}>Cargando asesores...</div>}
+        {loading && <div style={{ marginTop: 12 }}>Cargando usuarios de trabajo...</div>}
         {error && <div style={{ marginTop: 12 }}>{error}</div>}
       </div>
     </div>
