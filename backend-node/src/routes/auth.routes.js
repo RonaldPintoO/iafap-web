@@ -4,6 +4,7 @@ const requireAuth = require('../middleware/requireAuth');
 
 const router = express.Router();
 
+router.get('/status', controller.status);
 router.post('/login', controller.login);
 router.get('/me', requireAuth, controller.me);
 router.post('/logout', requireAuth, controller.logout);

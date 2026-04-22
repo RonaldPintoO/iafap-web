@@ -71,7 +71,7 @@ export default function useDetalleBps(item, detalleTab) {
       setTelefonoBpsLoading(true);
       setTelefonoBpsError("");
 
-      const response = await authFetch(`/personas/bps`, {
+      const response = await authFetch(`/personas/telefono-bps`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

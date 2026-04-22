@@ -39,15 +39,15 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useInactivityLogout(isAuthenticated && location.pathname !== '/login');
+  useInactivityLogout(isAuthenticated && location.pathname !== "/login");
 
   useEffect(() => {
     const syncAuthState = () => setIsAuthenticated(Boolean(getAuthSession()?.token));
-    window.addEventListener('storage', syncAuthState);
-    window.addEventListener('auth:expired', syncAuthState);
+    window.addEventListener("storage", syncAuthState);
+    window.addEventListener("auth:expired", syncAuthState);
     return () => {
-      window.removeEventListener('storage', syncAuthState);
-      window.removeEventListener('auth:expired', syncAuthState);
+      window.removeEventListener("storage", syncAuthState);
+      window.removeEventListener("auth:expired", syncAuthState);
     };
   }, []);
 
@@ -79,11 +79,12 @@ export default function App() {
     await logoutAsesor();
     setIsAuthenticated(false);
     closeDrawer();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   const asesorGuardado = getConfiguracionGuardada()?.asesorCodigo;
-  const showShell = location.pathname !== '/login';
+  const showShell = location.pathname !== "/login";
+  const mainClassName = showShell ? "main" : "main main--public";
 
   return (
     <>
@@ -121,7 +122,7 @@ export default function App() {
 
               <div className="meta">
                 <div>Versión Web 1.0</div>
-                <div>{isAuthenticated ? 'Sesión activa' : 'Sin sesión'}</div>
+                <div>{isAuthenticated ? "Sesión activa" : "Sin sesión"}</div>
               </div>
             </div>
 
@@ -154,7 +155,7 @@ export default function App() {
         </>
       ) : null}
 
-      <main className="main">
+      <main className={mainClassName}>
         <Routes>
           <Route
             path="/"

@@ -29,6 +29,24 @@ export async function authFetch(path, options = {}) {
   return response;
 }
 
+export async function fetchAuthStatus() {
+  const response = await fetch(`${API_BASE_URL}/auth/status`);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.detail || 'No se pudo consultar el estado del acceso.');
+    error.status = response.status;
+    throw error;
+  }
+
+  return {
+    blocked: Boolean(data.blocked),
+    remainingSeconds: Number(data.remainingSeconds || 0),
+    attempts: Number(data.attempts || 0),
+    detail: data.detail || '',
+  };
+}
+
 export async function loginAsesor(asenum) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
@@ -41,7 +59,8 @@ export async function loginAsesor(asenum) {
     const error = new Error(data.detail || 'No se pudo iniciar sesión.');
     error.status = response.status;
     error.code = data.code;
-    error.remainingSeconds = data.remainingSeconds || 0;
+    error.remainingSeconds = Number(data.remainingSeconds || 0);
+    error.attempts = Number(data.attempts || 0);
     throw error;
   }
 

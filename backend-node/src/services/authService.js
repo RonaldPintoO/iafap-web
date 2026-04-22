@@ -9,8 +9,8 @@ const AUTHORIZED_ASESORES = new Set([
 ]);
 
 const MAX_FAILED_ATTEMPTS = 3;
-const BLOCK_MINUTES = 5;
 const INACTIVITY_MINUTES = 5;
+const PERMANENT_LOCK_DATE = '2099-12-31T23:59:59';
 
 function normalizeAsenum(asenum) {
   return String(asenum || '').replace(/\D/g, '').slice(0, 4);
@@ -69,7 +69,11 @@ async function getClientState(clientKey) {
         failed_attempts,
         locked_until,
         last_attempt_at,
-        updated_at
+        updated_at,
+        CASE
+          WHEN locked_until IS NOT NULL AND locked_until > SYSDATETIME() THEN 1
+          ELSE 0
+        END AS is_blocked
       FROM dbo.WEBAPP_LOGIN_CLIENTS
       WHERE client_key = @clientKey
     `);
@@ -101,9 +105,9 @@ async function registerClientFailure(clientKey, reqMeta = {}) {
     .request()
     .input('clientKey', sql.VarChar(64), clientKey)
     .input('maxAttempts', sql.Int, MAX_FAILED_ATTEMPTS)
-    .input('blockMinutes', sql.Int, BLOCK_MINUTES)
     .input('ip', sql.VarChar(80), ip)
     .input('userAgent', sql.VarChar(sql.MAX), userAgent)
+    .input('permanentLockDate', sql.DateTime2, new Date(PERMANENT_LOCK_DATE))
     .query(`
       MERGE dbo.WEBAPP_LOGIN_CLIENTS AS target
       USING (
@@ -128,8 +132,8 @@ async function registerClientFailure(clientKey, reqMeta = {}) {
                   ELSE ISNULL(target.failed_attempts, 0) + 1
                 END
               ) >= @maxAttempts
-                THEN DATEADD(MINUTE, @blockMinutes, SYSDATETIME())
-              ELSE NULL
+                THEN @permanentLockDate
+              ELSE target.locked_until
             END,
           last_attempt_at = SYSDATETIME(),
           last_ip = source.last_ip,
@@ -153,7 +157,11 @@ async function registerClientFailure(clientKey, reqMeta = {}) {
         failed_attempts,
         locked_until,
         last_attempt_at,
-        updated_at
+        updated_at,
+        CASE
+          WHEN locked_until IS NOT NULL AND locked_until > SYSDATETIME() THEN 1
+          ELSE 0
+        END AS is_blocked
       FROM dbo.WEBAPP_LOGIN_CLIENTS
       WHERE client_key = @clientKey;
     `);
@@ -162,17 +170,33 @@ async function registerClientFailure(clientKey, reqMeta = {}) {
 }
 
 function buildLockResponse(state) {
-  const lockedUntil = state?.locked_until ? new Date(state.locked_until) : null;
-  const remainingMs = lockedUntil ? lockedUntil.getTime() - Date.now() : 0;
-  const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
-
   return {
     ok: false,
     status: 423,
     code: 'USER_BLOCKED',
     message: 'Comuniquese con Comercial si desea desbloquear su usuario.',
-    remainingSeconds,
+    remainingSeconds: 0,
     attempts: Number(state?.failed_attempts || MAX_FAILED_ATTEMPTS),
+  };
+}
+
+async function getClientLockStatus(reqMeta = {}) {
+  const clientKey = buildClientKey(reqMeta);
+  const clientState = await getClientState(clientKey);
+
+  if (!clientState || Number(clientState.is_blocked || 0) !== 1) {
+    return {
+      blocked: false,
+      remainingSeconds: 0,
+      attempts: Number(clientState?.failed_attempts || 0),
+    };
+  }
+
+  return {
+    blocked: true,
+    remainingSeconds: 0,
+    attempts: Number(clientState.failed_attempts || MAX_FAILED_ATTEMPTS),
+    message: 'Comuniquese con Comercial si desea desbloquear su usuario.',
   };
 }
 
@@ -345,11 +369,11 @@ async function login({ asenum, reqMeta = {} }) {
   const clientKey = buildClientKey(reqMeta);
 
   const clientState = await getClientState(clientKey);
-  if (clientState?.locked_until && new Date(clientState.locked_until).getTime() > Date.now()) {
+  if (clientState && Number(clientState.is_blocked || 0) === 1) {
     await appendAuthLog({
       asenum: code,
       eventType: 'LOGIN_BLOCKED',
-      detail: 'Cliente bloqueado temporalmente',
+      detail: 'Cliente bloqueado permanentemente',
       reqMeta,
     });
     return buildLockResponse(clientState);
@@ -358,7 +382,7 @@ async function login({ asenum, reqMeta = {} }) {
   const asesor = await findAuthorizedAsesor(code);
   if (!asesor) {
     const failureState = await registerClientFailure(clientKey, reqMeta);
-    const isBlocked = failureState?.locked_until && new Date(failureState.locked_until).getTime() > Date.now();
+    const isBlocked = Number(failureState?.is_blocked || 0) === 1;
 
     await appendAuthLog({
       asenum: code,
@@ -485,4 +509,5 @@ module.exports = {
   getPublicSession,
   normalizeAsenum,
   INACTIVITY_MINUTES,
+  getClientLockStatus,
 };

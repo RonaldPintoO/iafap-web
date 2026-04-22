@@ -3329,3 +3329,12 @@ body{
   margin: 0 auto;
   border-radius: 10px;
 }
+
+.main--public{
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100vh !important;
+  overflow: auto !important;
+}

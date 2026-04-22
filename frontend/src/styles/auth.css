@@ -180,3 +180,7 @@ body {
     min-height: calc(100vh - 205px);
   }
 }
+
+.auth-keypad__spacer {
+  min-height: 78px;
+}

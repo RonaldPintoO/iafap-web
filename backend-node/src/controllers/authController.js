@@ -40,6 +40,21 @@ async function login(req, res, next) {
   }
 }
 
+async function status(req, res, next) {
+  try {
+    const state = await authService.getClientLockStatus(getRequestMeta(req));
+    return res.json({
+      ok: true,
+      blocked: state.blocked,
+      remainingSeconds: state.remainingSeconds || 0,
+      attempts: state.attempts || 0,
+      detail: state.message || '',
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function me(req, res, next) {
   try {
     const token = readBearerToken(req);
@@ -74,6 +89,7 @@ async function logout(req, res, next) {
 
 module.exports = {
   login,
+  status,
   me,
   logout,
   readBearerToken,
