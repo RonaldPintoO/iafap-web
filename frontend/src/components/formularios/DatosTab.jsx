@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import FieldInput from "./FieldInput";
 import FieldSelect from "./FieldSelect";
 import FieldDate from "./FieldDate";
@@ -6,24 +5,24 @@ import FieldDate from "./FieldDate";
 import {
   PROYECTOS_DEMO,
   DISTANCIAS,
-  PAISES,
-  DEPARTAMENTOS,
   TIPOS_DOC,
   CODIGO_CI,
-  getLocalidadesByDepartamento,
   cleanNumbers,
   cleanAlphaNum,
   formatMoney,
   validarCedulaUruguaya,
 } from "./forms.utils";
 
-export default function DatosTab({ datos, setDatos }) {
+export default function DatosTab({
+  datos,
+  setDatos,
+  paisOptions = [],
+  departamentoOptions = [],
+  localidadOptions = [],
+  loadingCatalogos = false,
+  errorCatalogos = "",
+}) {
   const set = (k, v) => setDatos((d) => ({ ...d, [k]: v }));
-
-  const localidades = useMemo(
-    () => getLocalidadesByDepartamento(datos.departamento),
-    [datos.departamento]
-  );
 
   const cedulaEsCI = datos.tipoDocumento === "CI";
 
@@ -41,6 +40,10 @@ export default function DatosTab({ datos, setDatos }) {
 
   return (
     <div className="forms-datos">
+      {errorCatalogos ? (
+        <div className="forms-empty">{errorCatalogos}</div>
+      ) : null}
+
       <div className="forms-datos-row two">
         <FieldSelect
           label="Proyecto"
@@ -91,10 +94,16 @@ export default function DatosTab({ datos, setDatos }) {
         <FieldSelect
           label="País"
           value={datos.pais}
-          options={PAISES}
+          options={paisOptions}
           onChange={(v) =>
             setDatos((d) => {
-              const next = { ...d, pais: v };
+              const found = paisOptions.find((opt) => opt.value === v);
+
+              const next = {
+                ...d,
+                pais: v,
+                paisId: found?.idpais ?? null,
+              };
 
               if (!(v === "URUGUAY" && d.tipoDocumento === "CI")) {
                 next.codigoCI = "";
@@ -105,6 +114,8 @@ export default function DatosTab({ datos, setDatos }) {
               return next;
             })
           }
+          disabled={loadingCatalogos}
+          placeholder={loadingCatalogos ? "Cargando..." : "Seleccionar"}
         />
       </div>
 
@@ -257,7 +268,7 @@ export default function DatosTab({ datos, setDatos }) {
         <FieldSelect
           label="Departamento"
           value={datos.departamento}
-          options={DEPARTAMENTOS}
+          options={departamentoOptions}
           onChange={(v) =>
             setDatos((d) => ({
               ...d,
@@ -265,6 +276,8 @@ export default function DatosTab({ datos, setDatos }) {
               localidad: "",
             }))
           }
+          disabled={loadingCatalogos}
+          placeholder={loadingCatalogos ? "Cargando..." : "Seleccionar"}
         />
       </div>
 
@@ -272,11 +285,15 @@ export default function DatosTab({ datos, setDatos }) {
         <FieldSelect
           label="Localidad"
           value={datos.localidad}
-          options={localidades}
+          options={localidadOptions}
           onChange={(v) => set("localidad", v)}
-          disabled={!datos.departamento}
+          disabled={loadingCatalogos || !datos.departamento}
           placeholder={
-            !datos.departamento ? "Seleccionar departamento" : "Seleccionar"
+            loadingCatalogos
+              ? "Cargando..."
+              : !datos.departamento
+              ? "Seleccionar departamento"
+              : "Seleccionar"
           }
         />
       </div>

@@ -2,7 +2,6 @@ export const PERIODOS = ["5 días", "10 días", "15 días", "20 días", "25 día
 
 export const ESTATUS = ["Todos", "En Proceso", "Activos", "Inactivos"];
 
-// Leyenda (modal info)
 export const LEYENDA = [
   { color: "#000000", label: "Anulado" },
   { color: "#d32f2f", label: "Rechazado" },
@@ -13,7 +12,6 @@ export const LEYENDA = [
   { color: "#ffffff", label: "Vacío", border: "#000000" },
 ];
 
-// Opciones demo para Datos
 export const PROYECTOS_DEMO = [
   "1332-PRO-CBD 1303",
   "1512-PRO-SBZ 1373",
@@ -31,84 +29,14 @@ export const PROYECTOS_DEMO = [
 ];
 
 export const DISTANCIAS = ["-100 Km", "+100 Km"];
+
 export const TIPOS_DOC = [
   { value: "CI", label: "DO" },
   { value: "FS", label: "FS" },
   { value: "PA", label: "PA" },
 ];
+
 export const CODIGO_CI = ["Electrónico", "Impreso"];
-
-// Nuevos catálogos para frontend
-export const PAISES = [
-  "URUGUAY",
-  "ITALIA",
-  "ESPAÑA",
-  "ALEMANIA",
-  "ISLAS SALOMON",
-  "GRANADA",
-  "ARGENTINA",
-  "ESTADOS UNIDOS DE NORTE AMERICA",
-];
-
-export const DEPARTAMENTOS = [
-  "ARTIGAS",
-  "CANELONES",
-  "CERRO LARGO",
-  "COLONIA",
-  "DURAZNO",
-  "FLORIDA",
-  "FLORES",
-  "LAVALLEJA",
-  "MALDONADO",
-  "MONTEVIDEO",
-  "PAYSANDU",
-  "RIO NEGRO",
-  "ROCHA",
-  "RIVERA",
-  "SALTO",
-  "SAN JOSE",
-  "SORIANO",
-  "TACUAREMBO",
-  "TREINTA Y TRES",
-];
-
-export const LOCALIDADES_POR_DEPARTAMENTO = {
-  ARTIGAS: ["ARTIGAS", "BELLA UNION", "TOMAS GOMENSORO"],
-  CANELONES: [
-    "LAS PIEDRAS",
-    "CANELONES",
-    "LA PAZ",
-    "PANDO",
-    "SANTA LUCIA",
-    "PROGRESO",
-    "SAN RAMON",
-    "JUAN ANTONIO ARTIGAS",
-    "COLONIA NICOLICH",
-    "JOAQUIN SUAREZ",
-    "PASO DE CARRASCO",
-    "SANTA ROSA",
-    "SAUCE",
-    "TALA",
-    "ATLANTIDA",
-  ],
-  "CERRO LARGO": ["MELO", "RIO BRANCO", "FRAILE MUERTO"],
-  COLONIA: ["COLONIA DEL SACRAMENTO", "CARMELO", "JUAN LACAZE", "NUEVA HELVECIA"],
-  DURAZNO: ["DURAZNO", "SARANDI DEL YI"],
-  FLORIDA: ["FLORIDA", "SARANDI GRANDE"],
-  FLORES: ["TRINIDAD"],
-  LAVALLEJA: ["MINAS", "JOSE PEDRO VARELA", "MARISCALA"],
-  MALDONADO: ["MALDONADO", "PUNTA DEL ESTE", "SAN CARLOS", "PIRIAPOLIS"],
-  MONTEVIDEO: ["CENTRO", "CORDON", "POCITOS", "BUCEO", "UNION", "CERRO"],
-  PAYSANDU: ["PAYSANDU", "GUICHON", "QUEBRACHO"],
-  "RIO NEGRO": ["FRAY BENTOS", "YOUNG"],
-  ROCHA: ["ROCHA", "CHUY", "CASTILLOS", "LA PALOMA"],
-  RIVERA: ["RIVERA", "TRANQUERAS"],
-  SALTO: ["SALTO", "CONSTITUCION"],
-  "SAN JOSE": ["SAN JOSE DE MAYO", "LIBERTAD", "CIUDAD DEL PLATA"],
-  SORIANO: ["MERCEDES", "DOLORES", "CARDONA"],
-  TACUAREMBO: ["TACUAREMBO", "PASO DE LOS TOROS"],
-  "TREINTA Y TRES": ["TREINTA Y TRES", "VERGARA"],
-};
 
 export const ADD_TABS = [
   { id: "datos", label: "Datos" },
@@ -119,44 +47,18 @@ export const ADD_TABS = [
   { id: "f35_dorso", label: "Form. >35 Dorso" },
 ];
 
-export function buildDefaultDatos() {
-  return {
-    proyecto: PROYECTOS_DEMO[0],
-    distancia: DISTANCIAS[0],
-    asesor: "",
-    asesorForm: "",
-    fechaForm: "",
-
-    formulario: "",
-    tipoDocumento: "CI",
-    cedula: "",
-
-    codigoCI: "",
-    serieCodCI: "",
-    nroCodCI: "",
-
-    fechaNac: "",
-    telefono: "",
-    celular: "",
-
-    empresa: "",
-    sueldo: "",
-
-    mail: "",
-    calle: "",
-    nro: "",
-    apto: "",
-    bis: "",
-
-    pais: "URUGUAY",
-    departamento: "",
-    localidad: "",
-  };
+export function cleanText(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
 }
 
-/**
- * Helpers genéricos
- */
+export function normalizeText(value = "") {
+  return cleanText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
 export function cleanNumbers(v = "") {
   return String(v).replace(/\D/g, "");
 }
@@ -171,14 +73,6 @@ export function formatMoney(v = "") {
   return Number(nums).toLocaleString("es-UY");
 }
 
-export function getLocalidadesByDepartamento(departamento = "") {
-  return LOCALIDADES_POR_DEPARTAMENTO[departamento] || [];
-}
-
-/**
- * Validación de CI uruguaya
- * Solo aplica para documento tipo CI
- */
 export function validarCedulaUruguaya(ci = "") {
   const clean = cleanNumbers(ci);
   if (clean.length < 7 || clean.length > 8) return false;
@@ -195,9 +89,6 @@ export function validarCedulaUruguaya(ci = "") {
   return expected === Number(padded[7]);
 }
 
-/**
- * Helpers de fecha
- */
 export function formatDateDDMMYY(date) {
   const d = String(date.getDate()).padStart(2, "0");
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -226,183 +117,188 @@ export function getPeriodoDias(periodo) {
   return Number.isFinite(n) ? n : 30;
 }
 
-/**
- * Crea data demo relativa al día actual, para que los filtros de período
- * siempre se puedan probar sin depender de fechas fijas viejas.
- */
-export function buildDemoItems() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+export function buildDefaultDatos({
+  paises = [],
+  departamentos = [],
+  localidades = [],
+} = {}) {
+  const uruguay =
+    paises.find((p) => normalizeText(p?.nombre || p) === "URUGUAY") || null;
 
-  return [
-    {
-      id: "217450",
-      ci: "65882368",
-      fo: "FO",
-      proy: "3075",
-      km: "<100km",
-      fecha: formatDateDDMMYY(addDays(today, -1)),
-      hora: "09:22",
-      estadoTxt: "BPS",
-      color: "#43a047",
-      estatus: "Activos",
-    },
-    {
-      id: "218051",
-      ci: "53258418",
-      fo: "FO",
-      proy: "3075",
-      km: "<100km",
-      fecha: formatDateDDMMYY(addDays(today, -3)),
-      hora: "11:12",
-      estadoTxt: "BPS",
-      color: "#43a047",
-      estatus: "Activos",
-    },
-    {
-      id: "219777",
-      ci: "48771234",
-      fo: "FO",
-      proy: "3064",
-      km: "+100km",
-      fecha: formatDateDDMMYY(addDays(today, -5)),
-      hora: "15:48",
-      estadoTxt: "Faltante firma",
-      color: "#ffa000",
+  return {
+    proyecto: PROYECTOS_DEMO[0],
+    distancia: DISTANCIAS[0],
+    asesor: "",
+    asesorForm: "",
+    fechaForm: "",
+
+    formulario: "",
+    tipoDocumento: "CI",
+    cedula: "",
+
+    codigoCI: "",
+    serieCodCI: "",
+    nroCodCI: "",
+
+    fechaNac: "",
+    telefono: "",
+    celular: "",
+
+    empresa: "",
+    sueldo: "",
+
+    mail: "",
+    calle: "",
+    nro: "",
+    apto: "",
+    bis: "",
+
+    pais: uruguay?.nombre || "URUGUAY",
+    paisId: uruguay?.idpais ?? 1,
+    departamento: "",
+    localidad: "",
+  };
+}
+
+export function getNombrePaisOptions(paises = []) {
+  return paises.map((p) => ({
+    value: p.nombre,
+    label: p.nombre,
+    idpais: p.idpais,
+  }));
+}
+
+export function getDepartamentoOptions(departamentos = []) {
+  return departamentos.map((dep) => ({
+    value: dep,
+    label: dep,
+  }));
+}
+
+export function getLocalidadOptions(localidades = []) {
+  return localidades.map((loc) => ({
+    value: loc.localidad || loc,
+    label: loc.localidad || loc,
+    idlocalidad: loc.idlocalidad ?? null,
+  }));
+}
+
+export function formatDateTimeParts(value) {
+  if (!value) {
+    return {
+      fecha: "Pendiente",
+      hora: "",
+    };
+  }
+
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) {
+    return {
+      fecha: "",
+      hora: "",
+    };
+  }
+
+  const fecha = dt.toLocaleDateString("es-UY");
+  const hora = dt.toLocaleTimeString("es-UY", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return { fecha, hora };
+}
+
+export function resolveFormularioVisual(row) {
+  const accion = normalizeText(row?.foraccion);
+  const detalleOriginal = cleanText(row?.fordetalle);
+  const detalle = normalizeText(detalleOriginal);
+
+  const isPendiente =
+    row?.forcuando == null &&
+    !cleanText(row?.foraccion) &&
+    !cleanText(row?.fordetalle);
+
+  if (isPendiente) {
+    return {
+      estadoTxt: "Pendiente",
+      color: "#ffffff",
       estatus: "En Proceso",
-    },
-    {
-      id: "206257",
-      ci: "67231143",
-      fo: "FO",
-      proy: "3069",
-      km: "<100km",
-      fecha: formatDateDDMMYY(addDays(today, -7)),
-      hora: "11:02",
-      estadoTxt: "REC Solicitar codigo de CI",
-      color: "#d32f2f",
-      estatus: "Inactivos",
-    },
-    {
-      id: "205900",
-      ci: "45678123",
-      fo: "FO",
-      proy: "3117",
-      km: "+100km",
-      fecha: formatDateDDMMYY(addDays(today, -9)),
-      hora: "10:17",
-      estadoTxt: "En revisión",
-      color: "#ffa000",
-      estatus: "En Proceso",
-    },
-    {
-      id: "210321",
-      ci: "39874125",
-      fo: "FO",
-      proy: "3007",
-      km: "<100km",
-      fecha: formatDateDDMMYY(addDays(today, -12)),
-      hora: "08:55",
-      estadoTxt: "BPS",
-      color: "#43a047",
-      estatus: "Activos",
-    },
-    {
-      id: "210654",
-      ci: "41239876",
-      fo: "FO",
-      proy: "3152",
-      km: "+100km",
-      fecha: formatDateDDMMYY(addDays(today, -14)),
-      hora: "16:20",
-      estadoTxt: "Sin actividad",
+      borderColor: "#000000",
+    };
+  }
+
+  if (detalle.includes("SIN ACTIVIDAD")) {
+    return {
+      estadoTxt: detalleOriginal || "Sin actividad",
       color: "#2f3fa3",
       estatus: "Inactivos",
-    },
-    {
-      id: "211888",
-      ci: "50123456",
-      fo: "FO",
-      proy: "2030",
-      km: "<100km",
-      fecha: formatDateDDMMYY(addDays(today, -18)),
-      hora: "13:10",
-      estadoTxt: "Recibido sin errores",
-      color: "#cfead1",
-      estatus: "En Proceso",
-    },
-    {
-      id: "213100",
-      ci: "56781234",
-      fo: "FO",
-      proy: "3005",
-      km: "+100km",
-      fecha: formatDateDDMMYY(addDays(today, -23)),
-      hora: "09:40",
+    };
+  }
+
+  if (accion === "OK") {
+    return {
       estadoTxt: "BPS",
       color: "#43a047",
       estatus: "Activos",
-    },
-    {
-      id: "214444",
-      ci: "62345678",
-      fo: "FO",
-      proy: "1512",
-      km: "<100km",
-      fecha: formatDateDDMMYY(addDays(today, -28)),
-      hora: "12:03",
-      estadoTxt: "Rechazado",
-      color: "#d32f2f",
-      estatus: "Inactivos",
-    },
-    {
-      id: "199999",
-      ci: "34567891",
-      fo: "FO",
-      proy: "1332",
-      km: "<100km",
-      fecha: formatDateDDMMYY(addDays(today, -40)),
-      hora: "14:07",
+    };
+  }
+
+  if (accion === "REC" && detalle.includes("ANULAR")) {
+    return {
       estadoTxt: "Anulado",
       color: "#000000",
       estatus: "Inactivos",
-    },
-    {
-      id: "299999",
-      ci: "78912345",
-      fo: "FO",
-      proy: "3093",
-      km: "+100km",
-      fecha: formatDateDDMMYY(addDays(today, 2)),
-      hora: "10:00",
-      estadoTxt: "Pendiente",
+    };
+  }
+
+  if (accion === "REC") {
+    return {
+      estadoTxt: detalleOriginal ? `REC ${detalleOriginal}` : "Rechazado",
+      color: "#d32f2f",
+      estatus: "Inactivos",
+    };
+  }
+
+  if (detalleOriginal) {
+    return {
+      estadoTxt: detalleOriginal,
       color: "#ffa000",
       estatus: "En Proceso",
-    },
-  ];
+    };
+  }
+
+  if (accion === "ENV") {
+    return {
+      estadoTxt: "Recibido sin errores",
+      color: "#cfead1",
+      estatus: "En Proceso",
+    };
+  }
+
+  return {
+    estadoTxt: accion || "En proceso",
+    color: "#ffa000",
+    estatus: "En Proceso",
+  };
 }
 
-export const DEMO_ITEMS = buildDemoItems();
+export function mapFormularioItem(row) {
+  const { fecha, hora } = formatDateTimeParts(row?.forcuando);
+  const visual = resolveFormularioVisual(row);
 
-/**
- * Filtro combinado de período + estatus
- */
-export function filterFormsItems(items, periodo, estatus) {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-
-  const diasPeriodo = getPeriodoDias(periodo);
-
-  return items.filter((it) => {
-    const fechaItem = parseDDMMYYToDate(it.fecha);
-    if (!fechaItem) return false;
-
-    const diff = (hoy.getTime() - fechaItem.getTime()) / (1000 * 60 * 60 * 24);
-
-    const dentroPeriodo = diff >= 0 && diff <= diasPeriodo;
-    if (!dentroPeriodo) return false;
-
-    if (estatus === "Todos") return true;
-    return it.estatus === estatus;
-  });
+  return {
+    id: row?.fornum ? String(row.fornum) : "",
+    ci: "—",
+    fo: "FO",
+    proy: "—",
+    km: "",
+    fecha,
+    hora,
+    estadoTxt: visual.estadoTxt,
+    color: visual.color,
+    estatus: visual.estatus,
+    borderColor: visual.borderColor || "",
+    asesor: row?.forquien_env ? String(row.forquien_env) : "",
+    raw: row,
+  };
 }

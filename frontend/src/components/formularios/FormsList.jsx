@@ -6,20 +6,37 @@ export default function FormsList({ items }) {
       ) : (
         items.map((it) => (
           <div className="forms-item" key={it.id}>
-            <div className="forms-item__bar" style={{ background: it.color }} />
+            <div
+              className="forms-item__bar"
+              style={{
+                background: it.color,
+                border: it.borderColor ? `1px solid ${it.borderColor}` : "none",
+              }}
+            />
 
             <div className="forms-item__body">
               <div className="forms-item__top">
                 <div className="forms-item__id">{it.id}</div>
 
                 <div className="forms-item__main">
-                  <div className="forms-item__line">
-                    <span className="forms-item__ci">CI:{it.ci}</span> {it.fo}
-                  </div>
+                  {(it.ci && it.ci !== "—") || it.fo ? (
+                    <div className="forms-item__line">
+                      {it.ci && it.ci !== "—" ? (
+                        <span className="forms-item__ci">CI:{it.ci}</span>
+                      ) : null}{" "}
+                      {it.fo}
+                    </div>
+                  ) : null}
 
-                  <div className="forms-item__line">
-                    Proy.{it.proy} {it.km}
-                  </div>
+                  {(it.proy && it.proy !== "—") || it.km ? (
+                    <div className="forms-item__line">
+                      {it.proy && it.proy !== "—" ? `Proy.${it.proy}` : ""} {it.km}
+                    </div>
+                  ) : null}
+
+                  {it.asesor ? (
+                    <div className="forms-item__line">Asesor: {it.asesor}</div>
+                  ) : null}
                 </div>
               </div>
 

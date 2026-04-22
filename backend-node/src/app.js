@@ -8,6 +8,7 @@ const personasRoutes = require("./routes/personas.routes");
 const soloCedulaRoutes = require("./routes/soloCedula.routes");
 const authRoutes = require("./routes/auth.routes");
 const requireAuth = require("./middleware/requireAuth");
+const formulariosRoutes = require("./routes/formularios.routes");
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use("/configuracion/asesores", requireAuth, configuracionRoutes);
 app.use("/mapa", requireAuth, mapaRoutes);
 app.use("/personas", requireAuth, personasRoutes);
 app.use("/solo-cedula", requireAuth, soloCedulaRoutes);
+app.use("/formularios", requireAuth, formulariosRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
