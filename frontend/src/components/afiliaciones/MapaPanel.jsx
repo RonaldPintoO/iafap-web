@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import AfiMap from "../AfiMap.jsx";
+import AfiMap from "./AfiMap.jsx";
 
 export default function MapaPanel({
   mapRef,

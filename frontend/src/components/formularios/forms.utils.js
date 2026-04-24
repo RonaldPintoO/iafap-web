@@ -1,4 +1,11 @@
-export const PERIODOS = ["5 días", "10 días", "15 días", "20 días", "25 días", "30 días"];
+export const PERIODOS = [
+  "5 días",
+  "10 días",
+  "15 días",
+  "20 días",
+  "25 días",
+  "30 días",
+];
 
 export const ESTATUS = ["Todos", "En Proceso", "Activos", "Inactivos"];
 
@@ -64,7 +71,9 @@ export function cleanNumbers(v = "") {
 }
 
 export function cleanAlphaNum(v = "") {
-  return String(v).replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return String(v)
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase();
 }
 
 export function formatMoney(v = "") {
@@ -117,11 +126,7 @@ export function getPeriodoDias(periodo) {
   return Number.isFinite(n) ? n : 30;
 }
 
-export function buildDefaultDatos({
-  paises = [],
-  departamentos = [],
-  localidades = [],
-} = {}) {
+export function buildDefaultDatos({ paises = [] } = {}) {
   const uruguay =
     paises.find((p) => normalizeText(p?.nombre || p) === "URUGUAY") || null;
 
@@ -211,6 +216,7 @@ export function formatDateTimeParts(value) {
 export function resolveFormularioVisual(row) {
   const accion = normalizeText(row?.foraccion);
   const detalleOriginal = cleanText(row?.fordetalle);
+  const numeroRechazo = cleanText(row?.forrechnum);
   const detalle = normalizeText(detalleOriginal);
 
   const isPendiente =
@@ -237,9 +243,17 @@ export function resolveFormularioVisual(row) {
 
   if (accion === "OK") {
     return {
+      estadoTxt: "OK",
+      color: "#97d49a",
+      estatus: "Inactivos",
+    };
+  }
+
+  if (accion === "BPS") {
+    return {
       estadoTxt: "BPS",
       color: "#43a047",
-      estatus: "Activos",
+      estatus: "Inactivos",
     };
   }
 
@@ -252,6 +266,13 @@ export function resolveFormularioVisual(row) {
   }
 
   if (accion === "REC") {
+    if (numeroRechazo == 10) {
+      return {
+        estadoTxt: "Anulado",
+        color: "#000000",
+        estatus: "Inactivos",
+      };
+    }
     return {
       estadoTxt: detalleOriginal ? `REC ${detalleOriginal}` : "Rechazado",
       color: "#d32f2f",
@@ -285,7 +306,6 @@ export function resolveFormularioVisual(row) {
 export function mapFormularioItem(row) {
   const { fecha, hora } = formatDateTimeParts(row?.forcuando);
   const visual = resolveFormularioVisual(row);
-
   return {
     id: row?.fornum ? String(row.fornum) : "",
     ci: "—",

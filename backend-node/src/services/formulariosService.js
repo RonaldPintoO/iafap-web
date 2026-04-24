@@ -118,6 +118,7 @@ async function getFormulariosByAsesor({
           , f1.[forcuando]
           , f1.[foraccion]
           , f1.[fordetalle]
+          , f1.[forrechnum]
           , ROW_NUMBER() OVER (
               PARTITION BY f1.[fornum]
               ORDER BY f1.[forcuando] DESC
@@ -142,6 +143,7 @@ async function getFormulariosByAsesor({
           fb.[fornum]
         , u.[forcuando]
         , u.[foraccion]
+        , u.[forrechnum]
         , fr.[forpromoto] AS [forquien_env]
         , NULLIF(LTRIM(RTRIM(
             REPLACE(
@@ -193,13 +195,13 @@ async function getFormulariosByAsesor({
     .input("asenum", sql.VarChar(20), asesor)
     .input("periodoDias", sql.Int, dias)
     .query(query);
-
   const items = (result.recordset || []).map((row) => ({
     fornum: row.fornum != null ? String(row.fornum).trim() : "",
     forcuando: row.forcuando || null,
     foraccion: cleanText(row.foraccion),
     forquien_env: cleanText(row.forquien_env),
     fordetalle: cleanText(row.fordetalle),
+    forrechnum: row.forrechnum != null ? String(row.forrechnum).trim() : "",
   }));
 
   return {

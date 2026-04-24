@@ -1,11 +1,57 @@
-export default function FormsList({ items }) {
+export default function FormsList({ items, onItemClick }) {
+  const estadoOrden = [
+    "Pendiente",
+    "Recibido sin errores",
+    "En proceso",
+    "BPS",
+    "Rechazado",
+    "Sin Actividad",
+    "Anulado",
+  ];
+
+  const sortedItems = [...items].sort((a, b) => {
+    const estadoA = estadoOrden.indexOf(a.estadoTxt);
+    const estadoB = estadoOrden.indexOf(b.estadoTxt);
+
+    const ordenA = estadoA === -1 ? 999 : estadoA;
+    const ordenB = estadoB === -1 ? 999 : estadoB;
+
+    // Orden por estado
+    if (ordenA !== ordenB) {
+      return ordenA - ordenB;
+    }
+
+    // Mismo estado → ordenar por id
+    return a.id - b.id;
+  });
+
   return (
     <div className="forms-list">
-      {items.length === 0 ? (
+      {sortedItems.length === 0 ? (
         <div className="forms-empty">(Sin resultados)</div>
       ) : (
-        items.map((it) => (
-          <div className="forms-item" key={it.id}>
+        sortedItems.map((it) => (
+          <div
+            className={`forms-item ${
+              it.estadoTxt === "Pendiente" ? "is-clickable" : ""
+            }`}
+            key={it.id}
+            onClick={() => {
+              if (it.estadoTxt === "Pendiente") {
+                onItemClick?.(it);
+              }
+            }}
+            role="button"
+            tabIndex={it.estadoTxt === "Pendiente" ? 0 : -1}
+            onKeyDown={(e) => {
+              if (
+                it.estadoTxt === "Pendiente" &&
+                (e.key === "Enter" || e.key === " ")
+              ) {
+                onItemClick?.(it);
+              }
+            }}
+          >
             <div
               className="forms-item__bar"
               style={{
@@ -30,7 +76,8 @@ export default function FormsList({ items }) {
 
                   {(it.proy && it.proy !== "—") || it.km ? (
                     <div className="forms-item__line">
-                      {it.proy && it.proy !== "—" ? `Proy.${it.proy}` : ""} {it.km}
+                      {it.proy && it.proy !== "—" ? `Proy.${it.proy}` : ""}{" "}
+                      {it.km}
                     </div>
                   ) : null}
 

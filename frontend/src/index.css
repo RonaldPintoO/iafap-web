@@ -1379,6 +1379,19 @@ body{
   font-weight: 500;
 }
 
+.forms-item.is-clickable {
+  cursor: pointer;
+}
+
+.forms-item.is-clickable:hover {
+  filter: brightness(0.97);
+}
+
+.forms-item:not(.is-clickable) {
+  cursor: default;
+  opacity: 0.85; /* opcional */
+}
+
 .forms-item__bottom{
   margin-top: 14px;
   display: grid;

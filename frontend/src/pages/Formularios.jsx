@@ -45,11 +45,11 @@ export default function Formularios() {
   const paisOptions = useMemo(() => getNombrePaisOptions(paises), [paises]);
   const departamentoOptions = useMemo(
     () => getDepartamentoOptions(departamentos),
-    [departamentos]
+    [departamentos],
   );
   const localidadOptions = useMemo(
     () => getLocalidadOptions(localidades),
-    [localidades]
+    [localidades],
   );
 
   const items = useMemo(() => itemsRaw.map(mapFormularioItem), [itemsRaw]);
@@ -65,7 +65,7 @@ export default function Formularios() {
         paises,
         departamentos,
         localidades,
-      })
+      }),
     );
     setAddTab("datos");
   };
@@ -101,7 +101,8 @@ export default function Formularios() {
         let localidadesIniciales = [];
 
         if (primerDepartamento) {
-          localidadesIniciales = await fetchLocalidadesByDepartamento(primerDepartamento);
+          localidadesIniciales =
+            await fetchLocalidadesByDepartamento(primerDepartamento);
           if (ignore) return;
         }
 
@@ -112,11 +113,13 @@ export default function Formularios() {
             paises: data.paises || [],
             departamentos: data.departamentos || [],
             localidades: localidadesIniciales || [],
-          })
+          }),
         );
       } catch (err) {
         if (!ignore) {
-          setCatalogosError(err.message || "No se pudieron cargar los catálogos.");
+          setCatalogosError(
+            err.message || "No se pudieron cargar los catálogos.",
+          );
         }
       } finally {
         if (!ignore) setCatalogosLoading(false);
@@ -182,15 +185,17 @@ export default function Formularios() {
 
         setDatos((prev) => {
           const actualExiste = items.some(
-            (loc) => (loc.localidad || loc) === prev.localidad
+            (loc) => (loc.localidad || loc) === prev.localidad,
           );
 
           return {
             ...prev,
-            localidad: actualExiste ? prev.localidad : (items[0]?.localidad || ""),
+            localidad: actualExiste
+              ? prev.localidad
+              : items[0]?.localidad || "",
           };
         });
-      } catch (_err) {
+      } catch {
         if (!ignore) {
           setLocalidades([]);
         }
@@ -222,7 +227,22 @@ export default function Formularios() {
       ) : error ? (
         <div className="forms-empty">{error}</div>
       ) : (
-        <FormsList items={items} />
+        <FormsList
+          items={items}
+          onItemClick={(item) => {
+            const hoy = new Date().toISOString().slice(0, 10); // formato YYYY-MM-DD
+            setDatos((prev) => ({
+              ...prev,
+              formulario: item.id,
+              asesor: item.asesor,
+              asesorForm: item.asesor,
+              fechaForm: hoy,
+            }));
+
+            setAddTab("datos");
+            setShowAdd(true);
+          }}
+        />
       )}
 
       <button
