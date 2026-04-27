@@ -33,8 +33,7 @@ export default function DatosTab({
 
   const formatterDoc = cedulaEsCI ? cleanNumbers : cleanAlphaNum;
 
-  const aplicaCodCI =
-    datos.pais === "URUGUAY" && datos.tipoDocumento === "CI";
+  const aplicaCodCI = datos.pais === "URUGUAY" && datos.tipoDocumento === "CI";
 
   const noAplicaCodCI = !aplicaCodCI;
 
@@ -292,8 +291,8 @@ export default function DatosTab({
             loadingCatalogos
               ? "Cargando..."
               : !datos.departamento
-              ? "Seleccionar departamento"
-              : "Seleccionar"
+                ? "Seleccionar departamento"
+                : "Seleccionar"
           }
         />
       </div>

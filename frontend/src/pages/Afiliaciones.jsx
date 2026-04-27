@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import AfiliacionesTabs from "../components/afiliaciones/AfiliacionesTabs";
 import PersonasPanel from "../components/afiliaciones/PersonasPanel";
 import MapaPanel from "../components/afiliaciones/MapaPanel";
 import AgendadosPanel from "../components/afiliaciones/AgendadosPanel";
 import FiltrosModal from "../components/afiliaciones/FiltrosModal";
 import AddPersonaModal from "../components/afiliaciones/AddPersonaModal";
+import { getAuthSession } from "../components/auth/auth.storage";
 import {
   PERSONAS_PAGE_SIZE,
   digitsOnly,
@@ -13,6 +14,18 @@ import {
 } from "../components/afiliaciones/afiliaciones.utils";
 import { getConfiguracionGuardada } from "../components/configuracion/configuracion.utils";
 import { apiFetch } from "../config/api";
+
+import FormularioCargaModal from "../components/formularios/FormularioCargaModal";
+import {
+  buildDefaultDatos,
+  getDepartamentoOptions,
+  getLocalidadOptions,
+  getNombrePaisOptions,
+} from "../components/formularios/forms.utils";
+import {
+  fetchFormulariosCatalogos,
+  fetchLocalidadesByDepartamento,
+} from "../components/formularios/formularios.catalogos.api";
 
 export default function Afiliaciones() {
   const [tab, setTab] = useState("personas");
@@ -72,6 +85,33 @@ export default function Afiliaciones() {
 
   const [tipoPersona, setTipoPersona] = useState("todos");
   const [personasReloadToken, setPersonasReloadToken] = useState(0);
+
+  const [showFormularioModal, setShowFormularioModal] = useState(false);
+  const [formularioTab, setFormularioTab] = useState("datos");
+  const [formularioDatos, setFormularioDatos] = useState(() =>
+    buildDefaultDatos(),
+  );
+
+  const [formPaises, setFormPaises] = useState([]);
+  const [formDepartamentos, setFormDepartamentos] = useState([]);
+  const [formLocalidades, setFormLocalidades] = useState([]);
+  const [formCatalogosLoading, setFormCatalogosLoading] = useState(true);
+  const [formCatalogosError, setFormCatalogosError] = useState("");
+
+  const formPaisOptions = useMemo(
+    () => getNombrePaisOptions(formPaises),
+    [formPaises],
+  );
+
+  const formDepartamentoOptions = useMemo(
+    () => getDepartamentoOptions(formDepartamentos),
+    [formDepartamentos],
+  );
+
+  const formLocalidadOptions = useMemo(
+    () => getLocalidadOptions(formLocalidades),
+    [formLocalidades],
+  );
 
   const mapRef = useRef(null);
   const [userLoc, setUserLoc] = useState(null);
@@ -169,6 +209,51 @@ export default function Afiliaciones() {
     setShowFilters(false);
     setOpenDropdownId(null);
     handleClosePersonaDetalle();
+  };
+
+  const closeFormularioModal = () => {
+    setShowFormularioModal(false);
+  };
+
+  const resetFormularioModal = () => {
+    setFormularioDatos(
+      buildDefaultDatos({
+        paises: formPaises,
+        departamentos: formDepartamentos,
+        localidades: formLocalidades,
+      }),
+    );
+    setFormularioTab("datos");
+  };
+
+  const handleOpenFormularioModal = (persona) => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const session = getAuthSession();
+    console.log(persona);
+    const asesorCodigo = session.user.asenum;
+
+    const fechaNac = persona?.fechaNac ? persona.fechaNac.slice(0, 10) : "";
+
+    setFormularioDatos((prev) => ({
+      ...prev,
+      formulario: "",
+      asesor: asesorCodigo,
+      asesorForm: asesorCodigo,
+      fechaForm: hoy,
+
+      cedula: persona?.cedula ? String(persona.cedula) : "",
+      telefono: persona?.telefono ? String(persona.telefono) : "",
+      celular: persona?.celular ? String(persona.celular) : "",
+      mail: persona?.mail || "",
+      fechaNac,
+      departamento: persona?.departamento || "",
+      localidad: persona?.ciudad || persona?.localidad || "",
+      calle: persona?.calle || "",
+      nro: persona?.nroPuerta || persona?.nro || "",
+    }));
+
+    setFormularioTab("datos");
+    setShowFormularioModal(true);
   };
 
   const handleLocate = () => {
@@ -328,6 +413,102 @@ export default function Afiliaciones() {
   }, [showFilters, tab, personasAppliedValues]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadFormularioCatalogos() {
+      try {
+        setFormCatalogosLoading(true);
+        setFormCatalogosError("");
+
+        const data = await fetchFormulariosCatalogos();
+        if (cancelled) return;
+
+        setFormPaises(data.paises || []);
+        setFormDepartamentos(data.departamentos || []);
+
+        const primerDepartamento = data.departamentos?.[0] || "";
+        let localidadesIniciales = [];
+
+        if (primerDepartamento) {
+          localidadesIniciales =
+            await fetchLocalidadesByDepartamento(primerDepartamento);
+
+          if (cancelled) return;
+        }
+
+        setFormLocalidades(localidadesIniciales);
+
+        setFormularioDatos(
+          buildDefaultDatos({
+            paises: data.paises || [],
+            departamentos: data.departamentos || [],
+            localidades: localidadesIniciales || [],
+          }),
+        );
+      } catch (err) {
+        if (!cancelled) {
+          setFormCatalogosError(
+            err.message || "No se pudieron cargar los catálogos.",
+          );
+        }
+      } finally {
+        if (!cancelled) setFormCatalogosLoading(false);
+      }
+    }
+
+    loadFormularioCatalogos();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLocalidadesFormulario() {
+      const departamento = formularioDatos.departamento;
+
+      if (!departamento) {
+        setFormLocalidades([]);
+        return;
+      }
+
+      try {
+        const items = await fetchLocalidadesByDepartamento(departamento);
+        if (cancelled) return;
+
+        setFormLocalidades(items);
+
+        setFormularioDatos((prev) => {
+          const actualExiste = items.some(
+            (loc) => (loc.localidad || loc) === prev.localidad,
+          );
+
+          return {
+            ...prev,
+            localidad: actualExiste
+              ? prev.localidad
+              : items[0]?.localidad || "",
+          };
+        });
+      } catch {
+        if (!cancelled) {
+          setFormLocalidades([]);
+        }
+      }
+    }
+
+    if (showFormularioModal) {
+      loadLocalidadesFormulario();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formularioDatos.departamento, showFormularioModal]);
+
+  useEffect(() => {
     setLocMsg("");
     if (locStatus !== "idle") setLocStatus("idle");
   }, [tab, locStatus]);
@@ -353,7 +534,7 @@ export default function Afiliaciones() {
         }
 
         const res = await apiFetch(
-          `/personas/localidades?asesor=${encodeURIComponent(asesorCodigo)}`
+          `/personas/localidades?asesor=${encodeURIComponent(asesorCodigo)}`,
         );
 
         if (!res.ok) {
@@ -418,9 +599,7 @@ export default function Afiliaciones() {
           params.set("localidad", topLocValue);
         }
 
-        const res = await apiFetch(
-          `/personas/filtros?${params.toString()}`
-        );
+        const res = await apiFetch(`/personas/filtros?${params.toString()}`);
 
         if (!res.ok) {
           throw new Error("No se pudieron cargar los filtros");
@@ -605,7 +784,7 @@ export default function Afiliaciones() {
         }
 
         const res = await apiFetch(
-          `/personas/${encodeURIComponent(cedula)}/acciones`
+          `/personas/${encodeURIComponent(cedula)}/acciones`,
         );
 
         if (!res.ok) {
@@ -735,6 +914,7 @@ export default function Afiliaciones() {
           accionesPersona={accionesPersona}
           accionesPersonaLoading={accionesPersonaLoading}
           accionesPersonaError={accionesPersonaError}
+          onOpenFormularioModal={handleOpenFormularioModal}
         />
       )}
 
@@ -792,6 +972,28 @@ export default function Afiliaciones() {
         telOk={telOk}
         canSubmit={canSubmit}
         onSubmitPersona={onSubmitPersona}
+      />
+      <FormularioCargaModal
+        show={showFormularioModal}
+        closeAdd={closeFormularioModal}
+        addTab={formularioTab}
+        setAddTab={setFormularioTab}
+        datos={formularioDatos}
+        setDatos={setFormularioDatos}
+        paisOptions={formPaisOptions}
+        departamentoOptions={formDepartamentoOptions}
+        localidadOptions={formLocalidadOptions}
+        loadingCatalogos={formCatalogosLoading}
+        errorCatalogos={formCatalogosError}
+        onSubmit={() => {
+          console.log("[Afiliaciones] Guardar formulario:", {
+            datos: formularioDatos,
+            persona: personaSeleccionada,
+          });
+
+          closeFormularioModal();
+          resetFormularioModal();
+        }}
       />
     </div>
   );

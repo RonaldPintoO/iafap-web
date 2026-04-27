@@ -1,10 +1,14 @@
-import { API_BASE_URL } from '../../config/api';
-import { clearAuthSession, getAuthSession, saveAuthSession } from './auth.storage';
+import { API_BASE_URL } from "../../config/api";
+import {
+  clearAuthSession,
+  getAuthSession,
+  saveAuthSession,
+} from "./auth.storage";
 
 function buildHeaders(extra = {}) {
   const session = getAuthSession();
   const headers = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...extra,
   };
 
@@ -23,7 +27,7 @@ export async function authFetch(path, options = {}) {
 
   if (response.status === 401) {
     clearAuthSession();
-    window.dispatchEvent(new CustomEvent('auth:expired'));
+    window.dispatchEvent(new CustomEvent("auth:expired"));
   }
 
   return response;
@@ -34,7 +38,9 @@ export async function fetchAuthStatus() {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const error = new Error(data.detail || 'No se pudo consultar el estado del acceso.');
+    const error = new Error(
+      data.detail || "No se pudo consultar el estado del acceso.",
+    );
     error.status = response.status;
     throw error;
   }
@@ -43,20 +49,20 @@ export async function fetchAuthStatus() {
     blocked: Boolean(data.blocked),
     remainingSeconds: Number(data.remainingSeconds || 0),
     attempts: Number(data.attempts || 0),
-    detail: data.detail || '',
+    detail: data.detail || "",
   };
 }
 
 export async function loginAsesor(asenum) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ asenum }),
   });
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(data.detail || 'No se pudo iniciar sesión.');
+    const error = new Error(data.detail || "No se pudo iniciar sesión.");
     error.status = response.status;
     error.code = data.code;
     error.remainingSeconds = Number(data.remainingSeconds || 0);
@@ -74,10 +80,10 @@ export async function loginAsesor(asenum) {
 }
 
 export async function fetchMe() {
-  const response = await authFetch('/auth/me');
+  const response = await authFetch("/auth/me");
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(data.detail || 'Sesión inválida.');
+    const error = new Error(data.detail || "Sesión inválida.");
     error.status = response.status;
     throw error;
   }
@@ -86,7 +92,7 @@ export async function fetchMe() {
 
 export async function logoutAsesor() {
   try {
-    await authFetch('/auth/logout', { method: 'POST' });
+    await authFetch("/auth/logout", { method: "POST" });
   } finally {
     clearAuthSession();
   }

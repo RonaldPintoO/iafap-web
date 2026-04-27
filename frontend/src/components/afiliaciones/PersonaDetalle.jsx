@@ -16,6 +16,7 @@ export default function PersonaDetalle({
   accionesPersona,
   accionesPersonaLoading,
   accionesPersonaError,
+  onOpenFormularioModal,
 }) {
   const bps = useDetalleBps(item, detalleTab);
   const formulario = useDetalleFormulario(item, detalleTab);
@@ -37,6 +38,14 @@ export default function PersonaDetalle({
       )}
       {detalleTab === "bps" && <DetalleBps {...bps} />}
       {detalleTab === "formulario" && <DetalleFormulario {...formulario} />}
+      <button
+        type="button"
+        className="afi-formulario-fab"
+        aria-label="Cargar formulario"
+        onClick={() => onOpenFormularioModal?.(item)}
+      >
+        <span className="material-symbols-outlined">assignment</span>
+      </button>
     </div>
   );
 }

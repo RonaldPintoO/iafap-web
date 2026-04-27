@@ -33,6 +33,7 @@ export default function PersonasPanel({
   accionesPersona,
   accionesPersonaLoading,
   accionesPersonaError,
+  onOpenFormularioModal,
 }) {
   if (personaSeleccionada) {
     return (
@@ -44,6 +45,7 @@ export default function PersonasPanel({
         accionesPersona={accionesPersona}
         accionesPersonaLoading={accionesPersonaLoading}
         accionesPersonaError={accionesPersonaError}
+        onOpenFormularioModal={onOpenFormularioModal}
       />
     );
   }

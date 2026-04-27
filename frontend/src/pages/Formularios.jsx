@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  ADD_TABS,
   buildDefaultDatos,
   getDepartamentoOptions,
   getLocalidadOptions,
@@ -19,7 +18,7 @@ import {
 import FormsToolbar from "../components/formularios/FormsToolbar";
 import FormsList from "../components/formularios/FormsList";
 import FormsInfoModal from "../components/formularios/FormsInfoModal";
-import DatosTab from "../components/formularios/DatosTab";
+import FormularioCargaModal from "../components/formularios/FormularioCargaModal";
 
 export default function Formularios() {
   const [periodo, setPeriodo] = useState("30 días");
@@ -268,97 +267,24 @@ export default function Formularios() {
 
       <FormsInfoModal showInfo={showInfo} setShowInfo={setShowInfo} />
 
-      <div
-        className={`forms-add-backdrop ${showAdd ? "is-open" : ""}`}
-        onClick={closeAdd}
-      >
-        <div className="forms-add-modal" onClick={(e) => e.stopPropagation()}>
-          <div
-            className="forms-add-tabs"
-            role="tablist"
-            aria-label="Agregar formulario tabs"
-          >
-            {ADD_TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={addTab === t.id}
-                className={`forms-add-tab ${addTab === t.id ? "is-active" : ""}`}
-                onClick={() => setAddTab(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="forms-add-body">
-            {addTab === "datos" && (
-              <DatosTab
-                datos={datos}
-                setDatos={setDatos}
-                paisOptions={paisOptions}
-                departamentoOptions={departamentoOptions}
-                localidadOptions={localidadOptions}
-                loadingCatalogos={catalogosLoading}
-                errorCatalogos={catalogosError}
-              />
-            )}
-
-            {addTab === "formulario" && (
-              <div className="forms-add-placeholder">
-                (Pendiente) Acá va la pestaña Formulario.
-              </div>
-            )}
-
-            {addTab === "ci_frente" && (
-              <div className="forms-add-placeholder">
-                (Pendiente) Acá va Cédula Frente.
-              </div>
-            )}
-
-            {addTab === "ci_dorso" && (
-              <div className="forms-add-placeholder">
-                (Pendiente) Acá va Cédula Dorso.
-              </div>
-            )}
-
-            {addTab === "f35_frente" && (
-              <div className="forms-add-placeholder">
-                (Pendiente) Acá va Form. &gt;35 Frente.
-              </div>
-            )}
-
-            {addTab === "f35_dorso" && (
-              <div className="forms-add-placeholder">
-                (Pendiente) Acá va Form. &gt;35 Dorso.
-              </div>
-            )}
-          </div>
-
-          <div className="forms-add-actions">
-            <button
-              type="button"
-              className="forms-add-action is-primary"
-              onClick={() => {
-                console.log("[Formularios] Guardar:", { datos });
-                closeAdd();
-                resetAdd();
-              }}
-            >
-              Enviar
-            </button>
-
-            <button
-              type="button"
-              className="forms-add-action"
-              onClick={closeAdd}
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
+      <FormularioCargaModal
+        show={showAdd}
+        closeAdd={closeAdd}
+        addTab={addTab}
+        setAddTab={setAddTab}
+        datos={datos}
+        setDatos={setDatos}
+        paisOptions={paisOptions}
+        departamentoOptions={departamentoOptions}
+        localidadOptions={localidadOptions}
+        loadingCatalogos={catalogosLoading}
+        errorCatalogos={catalogosError}
+        onSubmit={() => {
+          console.log("[Formularios] Guardar:", { datos });
+          closeAdd();
+          resetAdd();
+        }}
+      />
     </div>
   );
 }
