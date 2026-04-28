@@ -2826,7 +2826,7 @@ body{
 .afi-formulario-fab {
   position: absolute;
   right: 16px;
-  top: 230px;
+  top: 180px;
   width: 54px;
   height: 54px;
   border-radius: 50%;
@@ -2843,7 +2843,7 @@ body{
 @media (max-width: 480px) {
   .afi-formulario-fab {
     right: 14px;
-    top: 252px;
+    top: 180px;
     width: 50px;
     height: 50px;
   }
@@ -2930,12 +2930,14 @@ body{
   max-width: 900px;
   margin: 0 auto;
   text-align: center;
-  font-size: clamp(24px, 6.6vw, 52px);
+  font-size: clamp(24px, 5.4vw, 52px);
   line-height: 1.08;
   font-weight: 800;
   text-transform: uppercase;
-  white-space: pre-line;
-  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  text-wrap: balance;
 }
 
 .afi-detail-hero__sub{
@@ -2954,6 +2956,31 @@ body{
   font-size: clamp(18px, 5vw, 30px);
   line-height: 1.15;
   font-weight: 500;
+}
+
+/* Ajuste título en ventanas angostas de escritorio */
+@media (max-width: 760px){
+  .afi-detail-hero__name{
+    max-width: 100%;
+    padding: 0 42px;
+    font-size: clamp(24px, 6vw, 34px);
+    line-height: 1.08;
+  }
+
+  .afi-detail-hero__sub{
+    font-size: clamp(16px, 4.2vw, 22px);
+  }
+
+  .afi-detail-hero__doc{
+    font-size: clamp(17px, 4.4vw, 24px);
+  }
+}
+
+@media (max-width: 420px){
+  .afi-detail-hero__name{
+    padding: 0 28px;
+    font-size: clamp(22px, 6.2vw, 30px);
+  }
 }
 
 /* TABS */
@@ -2979,14 +3006,16 @@ body{
   background: #fff;
   color: #b61c1c;
   font-weight: 700;
-  padding: 15px 10px;
+  padding: 14px 8px;
   position: relative;
   cursor: pointer;
-  font-size: clamp(14px, 3.7vw, 22px);
   text-align: center;
   white-space: nowrap;
 
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-width: 0;
+
+  font-size: clamp(12px, 2.8vw, 18px);
 }
 
 .afi-detail-tab.is-active::after{
@@ -3005,28 +3034,55 @@ body{
   flex: 0 0 1px;
 }
 
-/* MOBILE */
-@media (max-width: 520px){
+/* Ventanas angostas: mantener todo en una fila sin romper */
+@media (max-width: 760px){
   .afi-detail-tab{
-    flex: 1 1 auto;
-    min-width: 62px;
-    padding: 14px 6px;
-    font-size: 12px;
+    padding: 12px 6px;
+    font-size: clamp(11px, 2.7vw, 14px);
+    letter-spacing: -0.2px;
+  }
+
+  .afi-detail-tab:nth-child(1){
+    flex: 0.8 1 0;
+  }
+
+  .afi-detail-tab:nth-child(3){
+    flex: 1.05 1 0;
+  }
+
+  .afi-detail-tab:nth-child(5){
+    flex: 1.05 1 0;
+  }
+
+  .afi-detail-tab:nth-child(7){
+    flex: 0.7 1 0;
+  }
+
+  .afi-detail-tab:nth-child(9){
+    flex: 1.25 1 0;
   }
 }
 
-/* DESKTOP */
+/* Móvil muy chico: más compacto */
+@media (max-width: 420px){
+  .afi-detail-tab{
+    padding: 11px 5px;
+    font-size: 11px;
+    letter-spacing: -0.35px;
+  }
+}
+
+/* Desktop normal */
 @media (min-width: 1024px){
   .afi-detail-tabs{
     overflow-x: hidden;
   }
 
   .afi-detail-tab{
-    flex: 1 1 0;
     padding: 15px 12px;
+    font-size: clamp(13px, 1vw, 18px);
   }
 }
-
 /* BODY */
 .afi-detail-body{
   padding: 18px 18px 26px;
@@ -3385,4 +3441,546 @@ body{
   max-width: none !important;
   height: 100vh !important;
   overflow: auto !important;
+}
+
+/* =========================
+   AFILIACIONES - DETALLE VINCULOS
+   ========================= */
+
+.afi-vinculos-body {
+  padding: 12px 10px 22px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  background: #efefef;
+}
+
+.afi-vinculo-card {
+  width: 100%;
+  background: #f8f8f8;
+  border: 1px solid #dedede;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  overflow: hidden;
+}
+
+.afi-vinculo-card__title {
+  padding: 5px 12px 6px;
+  color: #fff;
+  font-size: clamp(20px, 5.4vw, 32px);
+  line-height: 1.05;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.afi-vinculo-card__title.is-sin-afap-sin-actividad {
+  background: #ffc928;
+}
+
+.afi-vinculo-card__title.is-sin-afap-ok {
+  background: #62ba64;
+}
+
+.afi-vinculo-card__title.is-integracion {
+  background: #586bc3;
+}
+
+.afi-vinculo-card__title.is-otra-afap {
+  background: #f24c4c;
+}
+
+.afi-vinculo-card__body {
+  display: grid;
+  grid-template-columns: 1fr 42px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px 10px;
+  min-height: 130px;
+}
+
+.afi-vinculo-card__content {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.afi-vinculo-card__name {
+  color: #777;
+  font-size: clamp(13px, 3.7vw, 18px);
+  line-height: 1.15;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.afi-vinculo-card__line {
+  color: #888;
+  font-size: clamp(13px, 3.65vw, 18px);
+  line-height: 1.15;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.afi-vinculo-card__line--inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.afi-vinculo-card__line--footer {
+  display: grid;
+  grid-template-columns: minmax(78px, auto) minmax(72px, auto) 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.afi-vinculo-card__line--footer strong {
+  color: #777;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.afi-vinculo-card__info {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #777;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  align-self: center;
+}
+
+.afi-vinculo-card__info:active {
+  background: rgba(0, 0, 0, .06);
+}
+
+.afi-vinculo-card__info .material-symbols-outlined {
+  font-size: 25px;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* Tablet / PC: una sola columna centrada tipo tarjeta */
+@media (min-width: 760px) {
+  .afi-detail {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 36px);
+    background: #efefef;
+  }
+
+  .afi-vinculos-body {
+    flex: 1;
+    grid-template-columns: minmax(0, 980px);
+    justify-content: center;
+    gap: 14px;
+    padding: 18px 24px 28px;
+    background: #efefef;
+  }
+
+  .afi-vinculo-card {
+    border-radius: 2px;
+  }
+
+  .afi-vinculo-card__body {
+    min-height: 120px;
+    padding: 10px 16px 12px;
+  }
+
+  .afi-vinculo-card__line--footer {
+    grid-template-columns: 150px 150px 1fr;
+  }
+}
+
+/* PC ancho: mantener tarjeta centrada, sin ocupar todo el ancho */
+@media (min-width: 1180px) {
+  .afi-vinculos-body {
+    grid-template-columns: minmax(0, 1040px);
+    gap: 16px;
+    padding-top: 22px;
+    padding-bottom: 34px;
+  }
+
+  .afi-vinculo-card__body {
+    min-height: 115px;
+  }
+}
+
+/* Móvil chico */
+@media (max-width: 420px) {
+  .afi-vinculo-card__body {
+    grid-template-columns: 1fr 34px;
+    padding: 8px 9px 10px;
+  }
+
+  .afi-vinculo-card__line--footer {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .afi-vinculo-card__line--footer strong {
+    grid-column: 2;
+  }
+
+  .afi-vinculo-card__info {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* =========================
+   AFILIACIONES - MODAL INFO VINCULO
+   ========================= */
+
+.afi-vinculo-info-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  background: rgba(0, 0, 0, .48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.afi-vinculo-info {
+  width: min(680px, 92vw);
+  max-height: min(86vh, 760px);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .38);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.afi-vinculo-info__header {
+  color: #fff;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.afi-vinculo-info__header.is-sin-afap-sin-actividad {
+  background: #ffc928;
+}
+
+.afi-vinculo-info__header.is-sin-afap-ok {
+  background: #62ba64;
+}
+
+.afi-vinculo-info__header.is-integracion {
+  background: #586bc3;
+}
+
+.afi-vinculo-info__header.is-otra-afap {
+  background: #f24c4c;
+}
+
+.afi-vinculo-info__kicker {
+  font-size: clamp(12px, 3.2vw, 14px);
+  line-height: 1.1;
+  font-weight: 700;
+  opacity: .9;
+  text-transform: uppercase;
+}
+
+.afi-vinculo-info__title {
+  margin-top: 2px;
+  font-size: clamp(22px, 5.8vw, 34px);
+  line-height: 1.05;
+  font-weight: 700;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+
+.afi-vinculo-info__close {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.afi-vinculo-info__close .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.afi-vinculo-info__body {
+  padding: 18px 20px 10px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.afi-vinculo-info__section {
+  padding: 0 0 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #dedede;
+}
+
+.afi-vinculo-info__section:last-child {
+  margin-bottom: 0;
+}
+
+.afi-vinculo-info__section h3 {
+  margin: 0 0 12px;
+  color: #222;
+  font-size: clamp(19px, 5vw, 26px);
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+.afi-vinculo-info__item {
+  display: grid;
+  grid-template-columns: minmax(116px, 170px) 1fr;
+  gap: 12px;
+  padding: 5px 0;
+  align-items: start;
+}
+
+.afi-vinculo-info__label {
+  color: #888;
+  font-size: clamp(13px, 3.7vw, 16px);
+  line-height: 1.2;
+}
+
+.afi-vinculo-info__value {
+  color: #333;
+  font-size: clamp(15px, 4.2vw, 19px);
+  line-height: 1.2;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.afi-vinculo-info__actions {
+  border-top: 1px solid #e5e5e5;
+  padding: 12px 18px 14px;
+  display: flex;
+  justify-content: flex-end;
+  background: #fff;
+}
+
+.afi-vinculo-info__actions button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #24c96b;
+  font-size: clamp(16px, 4.4vw, 22px);
+  font-weight: 800;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .afi-vinculo-info-backdrop {
+    padding: 14px;
+  }
+
+  .afi-vinculo-info {
+    width: 92vw;
+    max-height: 84vh;
+    border-radius: 4px;
+  }
+
+  .afi-vinculo-info__body {
+    padding: 16px 16px 8px;
+  }
+
+  .afi-vinculo-info__item {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: 6px 0;
+  }
+
+  .afi-vinculo-info__label {
+    font-size: 13px;
+  }
+
+  .afi-vinculo-info__value {
+    font-size: 17px;
+  }
+}
+
+/* =========================
+   AFILIACIONES - MODAL INFO VINCULO
+   ========================= */
+
+.afi-vinculo-info-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  background: rgba(0, 0, 0, .48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.afi-vinculo-info {
+  width: min(680px, 92vw);
+  max-height: min(86vh, 760px);
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .38);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.afi-vinculo-info__body {
+  padding: 26px 32px 12px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.afi-vinculo-info__section {
+  padding-bottom: 22px;
+}
+
+.afi-vinculo-info__section h3 {
+  margin: 0 0 18px;
+  color: #222;
+  font-size: clamp(24px, 5.6vw, 34px);
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.afi-vinculo-info__field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: baseline;
+  color: #222;
+  font-size: clamp(19px, 4.8vw, 28px);
+  line-height: 1.18;
+}
+
+.afi-vinculo-info__field-label {
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.afi-vinculo-info__field-value {
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.afi-vinculo-info__related-list {
+  margin-top: 34px;
+  display: grid;
+  gap: 0;
+}
+
+.afi-vinculo-info__related {
+  padding: 26px 0 0;
+  border-top: 1px solid #d9d9d9;
+}
+
+.afi-vinculo-info__related:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.afi-vinculo-info__related + .afi-vinculo-info__related {
+  margin-top: 26px;
+}
+
+.afi-vinculo-info__related-title {
+  margin-bottom: 8px;
+  font-size: clamp(22px, 5.4vw, 30px);
+  line-height: 1.15;
+  font-weight: 600;
+  color: #222;
+  letter-spacing: .2px;
+}
+
+.afi-vinculo-info__related-type,
+.afi-vinculo-info__related-name,
+.afi-vinculo-info__related-line {
+  font-size: clamp(21px, 5.2vw, 30px);
+  line-height: 1.18;
+  color: #222;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.afi-vinculo-info__empty {
+  color: #777;
+  font-size: clamp(17px, 4.4vw, 22px);
+}
+
+.afi-vinculo-info__actions {
+  border-top: 1px solid #e5e5e5;
+  padding: 14px 28px 18px;
+  display: flex;
+  justify-content: flex-end;
+  background: #fff;
+}
+
+.afi-vinculo-info__actions button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #24c96b;
+  font-size: clamp(18px, 4.6vw, 24px);
+  font-weight: 800;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .afi-vinculo-info-backdrop {
+    padding: 14px;
+  }
+
+  .afi-vinculo-info {
+    width: 92vw;
+    max-height: 84vh;
+    border-radius: 4px;
+  }
+
+  .afi-vinculo-info__body {
+    padding: 24px 26px 10px;
+  }
+
+  .afi-vinculo-info__section {
+    padding-bottom: 20px;
+  }
+
+  .afi-vinculo-info__field {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: 2px;
+    font-size: 24px;
+  }
+
+  .afi-vinculo-info__field-label {
+    white-space: normal;
+  }
+
+  .afi-vinculo-info__related-list {
+    margin-top: 38px;
+    gap: 0;
+  }
+
+  .afi-vinculo-info__related {
+    padding: 22px 0 0;
+  }
+
+  .afi-vinculo-info__related + .afi-vinculo-info__related {
+    margin-top: 22px;
+  }
+
+  .afi-vinculo-info__related-type,
+  .afi-vinculo-info__related-name,
+  .afi-vinculo-info__related-line {
+    font-size: 24px;
+  }
 }
