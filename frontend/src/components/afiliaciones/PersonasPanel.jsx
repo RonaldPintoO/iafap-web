@@ -33,6 +33,13 @@ export default function PersonasPanel({
   accionesPersona,
   accionesPersonaLoading,
   accionesPersonaError,
+  vinculosPersona,
+  vinculosPersonaLoading,
+  vinculosPersonaError,
+  vinculosInfoModal,
+  vinculosInfoModalLoading,
+  vinculosInfoModalError,
+  onOpenVinculoDelVinculo,
   onOpenFormularioModal,
 }) {
   if (personaSeleccionada) {
@@ -45,6 +52,13 @@ export default function PersonasPanel({
         accionesPersona={accionesPersona}
         accionesPersonaLoading={accionesPersonaLoading}
         accionesPersonaError={accionesPersonaError}
+        vinculosPersona={vinculosPersona}
+        vinculosPersonaLoading={vinculosPersonaLoading}
+        vinculosPersonaError={vinculosPersonaError}
+        vinculosInfoModal={vinculosInfoModal}
+        vinculosInfoModalLoading={vinculosInfoModalLoading}
+        vinculosInfoModalError={vinculosInfoModalError}
+        onSelectVinculo={onOpenVinculoDelVinculo}
         onOpenFormularioModal={onOpenFormularioModal}
       />
     );

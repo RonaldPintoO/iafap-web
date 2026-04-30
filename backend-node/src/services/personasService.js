@@ -91,6 +91,56 @@ function getExtensionFromMime(mimeType) {
   }
 }
 
+async function getVinculosPersona({ cedula }) {
+  const ci = String(cedula || "").trim();
+
+  if (!ci) {
+    const error = new Error("La cédula es requerida");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pool = await getPool();
+
+  const result = await pool.request().input("cedula", sql.VarChar, ci).query(`
+      SELECT
+  r.relci2 AS cedula,
+  t.reltipdet AS tipoVinculo,
+  p.perprinom AS primerNombre,
+  p.persegnom AS segundoNombre,
+  p.perpriape AS primerApellido,
+  p.persegape AS segundoApellido,
+  p.perfecnac AS nacimiento,
+  CASE
+    WHEN LTRIM(RTRIM(p.perafap)) = 'IN' THEN 'INTEGRACION'
+    WHEN LTRIM(RTRIM(p.perafap)) IN ('AF', 'OA', 'UN', 'RE') THEN 'OTRA AFAP'
+    WHEN LTRIM(RTRIM(p.perafap)) = '' OR p.perafap IS NULL THEN 'SIN AFAP'
+    ELSE 'SIN AFAP'
+  END AS situacionAfap,
+  p.perdepto AS departamento,
+  p.perciudad AS localidad,
+  p.pertel AS telefono,
+  p.percel AS celular,
+  p.percalle AS calle,
+  p.perpuerta AS numeroPuerta,
+  p.perapto AS apto
+FROM RELACIONES AS r
+INNER JOIN TIPORELACIONES AS t
+  ON r.reltipnum = t.reltipnum
+INNER JOIN PERSONA AS p
+  ON p.perci = r.relci2
+WHERE r.relci1 = @cedula
+ORDER BY t.reltipdet, p.perpriape, p.persegape, p.perprinom;
+    `);
+
+  const items = result.recordset || [];
+
+  return {
+    total: items.length,
+    items,
+  };
+}
+
 async function getFormularioFoto({ cedula }) {
   const cedulaTxt = String(cedula || "").trim();
 
@@ -104,8 +154,7 @@ async function getFormularioFoto({ cedula }) {
 
   const result = await pool
     .request()
-    .input("cedula", sql.VarChar(20), cedulaTxt)
-    .query(`
+    .input("cedula", sql.VarChar(20), cedulaTxt).query(`
       SELECT TOP (1)
         forci,
         forfoto
@@ -272,7 +321,7 @@ function filterItems(items, filters) {
 
 function sortAndUnique(values) {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b, "es", { sensitivity: "base" })
+    a.localeCompare(b, "es", { sensitivity: "base" }),
   );
 }
 
@@ -308,7 +357,9 @@ async function getPersonas({
     edadHastaNum !== null &&
     edadDesdeNum > edadHastaNum
   ) {
-    const error = new Error("La edad desde no puede ser mayor que la edad hasta");
+    const error = new Error(
+      "La edad desde no puede ser mayor que la edad hasta",
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -378,7 +429,7 @@ async function getLocalidades({ asesor }) {
   }
 
   const localidades = Array.from(unique).sort((a, b) =>
-    a.localeCompare(b, "es", { sensitivity: "base" })
+    a.localeCompare(b, "es", { sensitivity: "base" }),
   );
 
   return ["Todos", ...localidades];
@@ -398,11 +449,13 @@ async function getFiltrosPersonas({ asesor, localidad = "Todos" }) {
   const items = snapshotService.getItemsByAsesor(asesorTxt);
   const byLocalidad = filterItemsByLocalidad(items, localidad);
 
-  const tipos = sortAndUnique(byLocalidad.map((item) => cleanText(item.asidetalle)));
+  const tipos = sortAndUnique(
+    byLocalidad.map((item) => cleanText(item.asidetalle)),
+  );
   const acciones = sortAndUnique(
     byLocalidad
       .map((item) => cleanText(item.resnom))
-      .filter((value) => value && value !== "Sin Acción")
+      .filter((value) => value && value !== "Sin Acción"),
   );
 
   return {
@@ -429,17 +482,11 @@ async function getAccionesPersona({ cedula }) {
 
   await snapshotService.ensureSnapshotReady();
 
-  const snapshotItems =
-    snapshotService.getAccionesByDocumento(cedulaTxt) || [];
+  const snapshotItems = snapshotService.getAccionesByDocumento(cedulaTxt) || [];
 
-  snapshotService
-    .refreshAccionesForDocumento(cedulaTxt)
-    .catch((err) => {
-      console.error(
-        "[acciones] refresh puntual error:",
-        err?.message || err
-      );
-    });
+  snapshotService.refreshAccionesForDocumento(cedulaTxt).catch((err) => {
+    console.error("[acciones] refresh puntual error:", err?.message || err);
+  });
 
   return {
     total: snapshotItems.length,
@@ -463,5 +510,6 @@ module.exports = {
   getAccionesPersona,
   getAccionAdjuntoPdf,
   getPersonasSnapshotStatus,
+  getVinculosPersona,
   getFormularioFoto,
 };

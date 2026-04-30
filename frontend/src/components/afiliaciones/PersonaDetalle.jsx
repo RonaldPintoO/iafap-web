@@ -16,11 +16,17 @@ export default function PersonaDetalle({
   accionesPersona,
   accionesPersonaLoading,
   accionesPersonaError,
+  vinculosPersona,
+  vinculosPersonaLoading,
+  vinculosPersonaError,
+  onSelectVinculo,
   onOpenFormularioModal,
+  vinculosInfoModal = [],
+  vinculosInfoModalLoading = false,
+  vinculosInfoModalError = "",
 }) {
   const bps = useDetalleBps(item, detalleTab);
   const formulario = useDetalleFormulario(item, detalleTab);
-
   return (
     <div className="afi-detail">
       <PersonaDetalleHeader item={item} onClose={onClose} />
@@ -28,7 +34,17 @@ export default function PersonaDetalle({
       <PersonaDetalleTabs value={detalleTab} onChange={setDetalleTab} />
 
       {detalleTab === "datos" && <DetalleDatos item={item} />}
-      {detalleTab === "vinculos" && <DetalleVinculos />}
+      {detalleTab === "vinculos" && (
+        <DetalleVinculos
+          vinculos={vinculosPersona}
+          loading={vinculosPersonaLoading}
+          error={vinculosPersonaError}
+          onBuscarVinculosDePersona={onSelectVinculo}
+          vinculosInfoModal={vinculosInfoModal}
+          vinculosInfoModalLoading={vinculosInfoModalLoading}
+          vinculosInfoModalError={vinculosInfoModalError}
+        />
+      )}
       {detalleTab === "acciones" && (
         <DetalleAcciones
           accionesPersona={accionesPersona}

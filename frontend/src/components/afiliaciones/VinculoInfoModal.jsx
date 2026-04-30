@@ -13,9 +13,7 @@ function FieldLine({ label, value }) {
   return (
     <div className="afi-vinculo-info__field">
       <span className="afi-vinculo-info__field-label">{label}:</span>
-      <span className="afi-vinculo-info__field-value">
-        {cleanValue(value)}
-      </span>
+      <span className="afi-vinculo-info__field-value">{cleanValue(value)}</span>
     </div>
   );
 }
@@ -26,22 +24,23 @@ function VinculoRelacionado({ item }) {
       <div className="afi-vinculo-info__related-title">VÍNCULO</div>
 
       <div className="afi-vinculo-info__related-type">
-        {cleanValue(item?.tipo) || "Sin tipo de vínculo"}
+        {cleanValue(item?.tipoVinculo) || "Sin tipo de vínculo"}
       </div>
 
       <div className="afi-vinculo-info__related-name">
-        {cleanValue(item?.nombre) || "Sin nombre"}
+        {cleanValue(item?.primerNombre)} {cleanValue(item?.segundoNombre)}{" "}
+        {cleanValue(item?.primerApellido)} {cleanValue(item?.segundoApellido)}
       </div>
 
-      {hasValue(item?.fecha) && (
+      {hasValue(item?.nacimiento) && (
         <div className="afi-vinculo-info__related-line">
-          FECHA:{cleanValue(item.fecha)}
+          FECHA:{new Date(item.nacimiento).toLocaleDateString("es-UY")}
         </div>
       )}
 
       {hasValue(item?.cedula) && (
         <div className="afi-vinculo-info__related-line">
-          CED.:{cleanValue(item.cedula)}
+          CEDULA:{cleanValue(item.cedula)}
         </div>
       )}
     </section>
@@ -50,7 +49,6 @@ function VinculoRelacionado({ item }) {
 
 export default function VinculoInfoModal({ vinculo, onClose }) {
   if (!vinculo) return null;
-
   const datos = vinculo?.datosDetalle || {};
   const vinculosRelacionados = vinculo?.vinculosDelVinculo || [];
 
@@ -66,19 +64,13 @@ export default function VinculoInfoModal({ vinculo, onClose }) {
           <section className="afi-vinculo-info__section">
             <h3>Datos</h3>
 
-            <FieldLine label="Primer Apellido" value={datos.primerApellido} />
-            <FieldLine label="Segundo Apellido" value={datos.segundoApellido} />
-            <FieldLine label="Primer Nombre" value={datos.primerNombre} />
-            <FieldLine label="Segundo Nombre" value={datos.segundoNombre} />
-            <FieldLine
-              label="Fecha Nacimiento"
-              value={datos.fechaNacimiento}
-            />
-            <FieldLine label="Ciudad" value={datos.ciudad} />
-            <FieldLine label="Localidad" value={datos.localidad} />
-            <FieldLine label="Teléfono" value={datos.telefono} />
+            <div className="afi-vinculo-info__related-name">
+              {cleanValue(datos.primerNombre)} {cleanValue(datos.segundoNombre)}{" "}
+              {cleanValue(datos.primerApellido)}{" "}
+              {cleanValue(datos.segundoApellido)} FECHA:
+              {new Date(datos.nacimiento).toLocaleDateString("es-UY")}
+            </div>
           </section>
-
           <div className="afi-vinculo-info__related-list">
             {vinculosRelacionados.length ? (
               vinculosRelacionados.map((item, index) => (

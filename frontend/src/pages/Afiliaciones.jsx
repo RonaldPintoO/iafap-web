@@ -67,6 +67,15 @@ export default function Afiliaciones() {
   const [personasTotalPages, setPersonasTotalPages] = useState(0);
   const [personasFiltrosError, setPersonasFiltrosError] = useState("");
 
+  const [vinculosPersona, setVinculosPersona] = useState([]);
+  const [vinculosPersonaLoading, setVinculosPersonaLoading] = useState(false);
+  const [vinculosPersonaError, setVinculosPersonaError] = useState("");
+
+  const [vinculosInfoModal, setVinculosInfoModal] = useState([]);
+  const [vinculosInfoModalLoading, setVinculosInfoModalLoading] =
+    useState(false);
+  const [vinculosInfoModalError, setVinculosInfoModalError] = useState("");
+
   const [personaSeleccionada, setPersonaSeleccionada] = useState(null);
   const [detalleTab, setDetalleTab] = useState("datos");
   const [accionesPersona, setAccionesPersona] = useState([]);
@@ -135,8 +144,6 @@ export default function Afiliaciones() {
 
   const onSubmitPersona = () => {
     if (!canSubmit) return;
-
-    console.log("Nueva persona:", personaForm);
     setPersonaForm({
       ci: "",
       nombre: "",
@@ -146,12 +153,43 @@ export default function Afiliaciones() {
     closeAddPersona();
   };
 
+  const handleOpenVinculoDelVinculo = async (item) => {
+    if (!item?.cedula) return;
+
+    try {
+      setVinculosInfoModalLoading(true);
+      setVinculosInfoModalError("");
+      setVinculosInfoModal([]);
+      const res = await apiFetch(
+        `/personas/${encodeURIComponent(item.cedula)}/vinculos`,
+      );
+
+      if (!res.ok) {
+        throw new Error("No se pudieron cargar los vínculos del vínculo");
+      }
+
+      const data = await res.json();
+
+      setVinculosInfoModal(Array.isArray(data.items) ? data.items : []);
+    } catch (err) {
+      setVinculosInfoModal([]);
+      setVinculosInfoModalError(
+        err.message || "Error cargando vínculos del vínculo",
+      );
+    } finally {
+      setVinculosInfoModalLoading(false);
+    }
+  };
+
   const handleOpenPersonaDetalle = (item) => {
     setPersonaSeleccionada(item);
     setDetalleTab("datos");
     setAccionesPersona([]);
     setAccionesPersonaError("");
     setAccionesPersonaLoading(false);
+    setVinculosPersona([]);
+    setVinculosPersonaError("");
+    setVinculosPersonaLoading(false);
   };
 
   const handleClosePersonaDetalle = () => {
@@ -229,7 +267,6 @@ export default function Afiliaciones() {
   const handleOpenFormularioModal = (persona) => {
     const hoy = new Date().toISOString().slice(0, 10);
     const session = getAuthSession();
-    console.log(persona);
     const asesorCodigo = session.user.asenum;
 
     const fechaNac = persona?.fechaNac ? persona.fechaNac.slice(0, 10) : "";
@@ -882,6 +919,51 @@ export default function Afiliaciones() {
     };
   }, [tab, edadMinAplicada, edadMaxAplicada, tipoPersona, topLocValue]);
 
+  useEffect(() => {
+    const cedula = personaSeleccionada?.cedula;
+
+    if (!cedula) return;
+    if (detalleTab !== "vinculos") return;
+
+    let cancelled = false;
+
+    const fetchVinculos = async () => {
+      try {
+        setVinculosPersonaLoading(true);
+        setVinculosPersonaError("");
+
+        const res = await apiFetch(
+          `/personas/${encodeURIComponent(cedula)}/vinculos`,
+        );
+
+        if (!res.ok) {
+          throw new Error("No se pudieron cargar los vínculos");
+        }
+
+        const data = await res.json();
+
+        if (!cancelled) {
+          setVinculosPersona(Array.isArray(data.items) ? data.items : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setVinculosPersona([]);
+          setVinculosPersonaError(err.message || "Error cargando vínculos");
+        }
+      } finally {
+        if (!cancelled) {
+          setVinculosPersonaLoading(false);
+        }
+      }
+    };
+
+    fetchVinculos();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [personaSeleccionada?.cedula, detalleTab]);
+
   return (
     <div className="afi-page">
       <AfiliacionesTabs tab={tab} setTab={setTab} />
@@ -915,6 +997,13 @@ export default function Afiliaciones() {
           accionesPersonaLoading={accionesPersonaLoading}
           accionesPersonaError={accionesPersonaError}
           onOpenFormularioModal={handleOpenFormularioModal}
+          vinculosPersona={vinculosPersona}
+          vinculosPersonaLoading={vinculosPersonaLoading}
+          vinculosPersonaError={vinculosPersonaError}
+          onOpenVinculoDelVinculo={handleOpenVinculoDelVinculo}
+          vinculosInfoModal={vinculosInfoModal}
+          vinculosInfoModalLoading={vinculosInfoModalLoading}
+          vinculosInfoModalError={vinculosInfoModalError}
         />
       )}
 

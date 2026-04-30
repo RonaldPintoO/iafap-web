@@ -11,5 +11,6 @@ router.post("/snapshot/refresh", personasController.refreshSnapshot);
 router.get("/acciones/:accnum/adjunto", personasController.getAccionAdjuntoPdf);
 router.get("/:cedula/acciones", personasController.getAccionesPersona);
 router.post("/telefono-bps", personasController.getTelefonoBps);
+router.get("/:cedula/vinculos", personasController.getVinculosPersona);
 router.get("/:cedula/formulario", personasController.getFormularioFoto);
 module.exports = router;
