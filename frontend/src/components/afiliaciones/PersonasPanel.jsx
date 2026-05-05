@@ -47,7 +47,9 @@ export default function PersonasPanel({
   accionesCatalogosError,
   accionSaving,
   accionSaveError,
+  accionEditando,
   onOpenNuevaAccion,
+  onOpenEditarAccion,
   onCloseNuevaAccion,
   onSaveNuevaAccion,
   onReloadAccionesCatalogos,
@@ -76,7 +78,9 @@ export default function PersonasPanel({
         accionesCatalogosError={accionesCatalogosError}
         accionSaving={accionSaving}
         accionSaveError={accionSaveError}
+        accionEditando={accionEditando}
         onOpenNuevaAccion={onOpenNuevaAccion}
+        onOpenEditarAccion={onOpenEditarAccion}
         onCloseNuevaAccion={onCloseNuevaAccion}
         onSaveNuevaAccion={onSaveNuevaAccion}
         onReloadAccionesCatalogos={onReloadAccionesCatalogos}

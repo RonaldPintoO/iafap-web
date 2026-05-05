@@ -1,11 +1,31 @@
+import { useEffect, useState } from "react";
 import { apiFetch } from "../../config/api";
+
+function puedeEditarAhora(accion, nowMs) {
+  if (!accion?.puedeEditar || !accion?.accnum) return false;
+
+  if (!accion?.editableHasta) return true;
+
+  const hastaMs = new Date(accion.editableHasta).getTime();
+  if (!Number.isFinite(hastaMs)) return Boolean(accion.puedeEditar);
+
+  return nowMs <= hastaMs;
+}
 
 export default function DetalleAcciones({
   accionesPersona,
   accionesPersonaLoading,
   accionesPersonaError,
   onOpenNuevaAccion,
+  onOpenEditarAccion,
 }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 15000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const handleOpenAdjunto = async (accion) => {
     if (!accion?.accnum || !accion?.tieneAdjuntoVisible) return;
 
@@ -75,6 +95,7 @@ export default function DetalleAcciones({
               : accion?.estado === "Pendiente"
                 ? "is-pendiente"
                 : "is-desconocido";
+          const mostrarEditar = puedeEditarAhora(accion, nowMs);
 
           return (
             <article
@@ -120,19 +141,31 @@ export default function DetalleAcciones({
 
               <div className="afi-action-card__footer">
                 <div className="afi-action-card__footer-text">
-                  Asesor:{" "}
+                  Asesor: {" "}
                   {accion?.asesorNombreCompleto || accion?.asenum || "-"}
                 </div>
 
-                {accion?.tieneAdjuntoVisible ? (
-                  <button
-                    type="button"
-                    className="afi-detail-link afi-action-card__pdf-btn"
-                    onClick={() => handleOpenAdjunto(accion)}
-                  >
-                    {accion?.adjuntoAccionLabel || "Ver Adjunto"}
-                  </button>
-                ) : null}
+                <div className="afi-action-card__footer-actions">
+                  {mostrarEditar ? (
+                    <button
+                      type="button"
+                      className="afi-action-card__edit-btn"
+                      onClick={() => onOpenEditarAccion?.(accion)}
+                    >
+                      Editar
+                    </button>
+                  ) : null}
+
+                  {accion?.tieneAdjuntoVisible ? (
+                    <button
+                      type="button"
+                      className="afi-detail-link afi-action-card__pdf-btn"
+                      onClick={() => handleOpenAdjunto(accion)}
+                    >
+                      {accion?.adjuntoAccionLabel || "Ver Adjunto"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </article>
           );

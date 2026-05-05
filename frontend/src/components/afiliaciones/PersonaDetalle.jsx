@@ -31,7 +31,9 @@ export default function PersonaDetalle({
   accionesCatalogosError = "",
   accionSaving = false,
   accionSaveError = "",
+  accionEditando = null,
   onOpenNuevaAccion,
+  onOpenEditarAccion,
   onCloseNuevaAccion,
   onSaveNuevaAccion,
   onReloadAccionesCatalogos,
@@ -62,6 +64,7 @@ export default function PersonaDetalle({
           accionesPersonaLoading={accionesPersonaLoading}
           accionesPersonaError={accionesPersonaError}
           onOpenNuevaAccion={onOpenNuevaAccion}
+          onOpenEditarAccion={onOpenEditarAccion}
         />
       )}
       {detalleTab === "bps" && <DetalleBps {...bps} />}
@@ -77,6 +80,8 @@ export default function PersonaDetalle({
 
       <AccionPersonaModal
         show={showAccionModal}
+        mode={accionEditando ? "edit" : "create"}
+        accion={accionEditando}
         item={item}
         catalogos={accionesCatalogos}
         loadingCatalogos={accionesCatalogosLoading}

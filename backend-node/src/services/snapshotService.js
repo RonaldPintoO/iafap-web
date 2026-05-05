@@ -89,6 +89,17 @@ function formatFechaISO(value) {
   }
 }
 
+function formatFechaAccionTextoSql(value) {
+  const text = cleanText(value);
+  if (!text) return "";
+
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!match) return "";
+
+  const [, yyyy, mm, dd, hh, mi] = match;
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+}
+
 function buildFechaAccionTexto(acccuando, asesorNombreCompleto, asenum) {
   if (!acccuando) return "Sin Acción";
 
@@ -415,6 +426,9 @@ function mapDbRowToSnapshotItem(row, smsItem = null) {
 }
 
 function formatFechaAccionTexto(value) {
+  const sqlText = formatFechaAccionTextoSql(value);
+  if (sqlText) return sqlText;
+
   if (!value) return "";
 
   try {
@@ -580,14 +594,26 @@ function buildAccionesIndex(rows) {
     map.get(cedula).push({
       accnum: toNumberOrNull(row.accnum),
       cedula,
-      fecha: formatFechaISO(row.acccuando),
-      fechaTexto: formatFechaAccionTexto(row.acccuando),
+      fecha: cleanText(row.acccuando_iso_local) || formatFechaISO(row.acccuando),
+      fechaSql: cleanText(row.acccuando_texto),
+      fechaTexto: formatFechaAccionTexto(row.acccuando_texto || row.acccuando),
+      acctipo: toNumberOrNull(row.acctipo),
       asenum: cleanText(row.asenum),
       asesorNombreCompleto,
       resnum,
       resnom: cleanText(row.resnom) || "Sin resultado",
       restipo: toNumberOrNull(row.restipo),
       estado: buildEstadoAccion(row.restipo),
+      accobs: normalizeAccobs(row.accobs),
+      accobs2: normalizeAccobs(row.accobs2),
+      acctelnvo: cleanText(row.acctelnvo),
+      accdirnvo: cleanText(row.accdirnvo),
+      accvaluacion: toNumberOrNull(row.accvaluacion) || 0,
+      puedeEditarServidor: Number(row.puede_editar_servidor) === 1,
+      editableSegundosRestantes: Math.max(
+        0,
+        toNumberOrNull(row.editable_segundos_restantes) || 0,
+      ),
       observacion: buildObservacion(row),
       accext,
       tieneAdjunto,
@@ -871,8 +897,10 @@ async function fetchAccionesRowsFromDb() {
       a.accnum,
       a.perci,
       a.acccuando,
+      a.acctipo,
       a.asenum,
       a.resnum,
+      a.accvaluacion,
       a.accobs,
       a.accobs2,
       a.acctelnvo,
@@ -1060,8 +1088,17 @@ async function refreshAccionesForDocumento(cedula) {
       a.accnum,
       a.perci,
       a.acccuando,
+      CONVERT(varchar(19), a.acccuando, 120) AS acccuando_texto,
+      CONVERT(varchar(23), a.acccuando, 121) AS acccuando_iso_local,
+      CASE
+        WHEN a.acccuando >= DATEADD(MINUTE, -5, SYSDATETIME()) THEN 1
+        ELSE 0
+      END AS puede_editar_servidor,
+      DATEDIFF(SECOND, SYSDATETIME(), DATEADD(MINUTE, 5, a.acccuando)) AS editable_segundos_restantes,
+      a.acctipo,
       a.asenum,
       a.resnum,
+      a.accvaluacion,
       a.accobs,
       a.accobs2,
       a.acctelnvo,

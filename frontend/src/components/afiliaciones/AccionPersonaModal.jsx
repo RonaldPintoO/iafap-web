@@ -51,9 +51,31 @@ function formatNow() {
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 }
 
+function accionToForm(accion, tipos) {
+  if (!accion) {
+    return {
+      ...EMPTY_FORM,
+      acctipo: tipos[0]?.ta_num || "",
+    };
+  }
+
+  return {
+    acctipo: accion.acctipo || tipos[0]?.ta_num || "",
+    restipo:
+      accion.restipo === 0 || accion.restipo === 1 ? String(accion.restipo) : "",
+    resnum: accion.resnum || "",
+    accvaluacion: Number(accion.accvaluacion) || 0,
+    accobs: String(accion.accobs || ""),
+    accdirnvo: String(accion.accdirnvo || ""),
+    acctelnvo: String(accion.acctelnvo || "").trim(),
+  };
+}
+
 export default function AccionPersonaModal({
   show,
+  mode = "create",
   item,
+  accion,
   catalogos,
   loadingCatalogos,
   errorCatalogos,
@@ -63,6 +85,7 @@ export default function AccionPersonaModal({
   onSave,
   onReloadCatalogos,
 }) {
+  const isEdit = mode === "edit" && Boolean(accion?.accnum);
   const [form, setForm] = useState(EMPTY_FORM);
   const [openMenu, setOpenMenu] = useState(null);
   const [fechaTexto, setFechaTexto] = useState(() => formatNow());
@@ -110,30 +133,24 @@ export default function AccionPersonaModal({
   useEffect(() => {
     if (!show) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFechaTexto(formatNow());
-    setForm((prev) => {
-      const defaultTipo = prev.acctipo || tipos[0]?.ta_num || "";
-      return {
-        ...EMPTY_FORM,
-        acctipo: defaultTipo,
-      };
-    });
+    setForm(accionToForm(isEdit ? accion : null, tipos));
     setOpenMenu(null);
-  }, [show, tipos]);
+  }, [show, isEdit, accion, tipos]);
 
   useEffect(() => {
     if (!show) return;
     if (!form.acctipo && tipos[0]?.ta_num) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm((prev) => ({ ...prev, acctipo: tipos[0].ta_num }));
     }
   }, [show, tipos, form.acctipo]);
 
   useEffect(() => {
     if (!show) return;
-    if (form.resnum && !resultadosFiltrados.some((row) => String(row.resnum) === String(form.resnum))) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (
+      form.resnum &&
+      !resultadosFiltrados.some((row) => String(row.resnum) === String(form.resnum))
+    ) {
       setForm((prev) => ({ ...prev, resnum: "" }));
     }
   }, [show, form.resnum, resultadosFiltrados]);
@@ -156,6 +173,8 @@ export default function AccionPersonaModal({
       ...prev,
       restipo: value,
       resnum: "",
+      accdirnvo: "",
+      acctelnvo: "",
     }));
     setOpenMenu(null);
   };
@@ -195,7 +214,9 @@ export default function AccionPersonaModal({
       <div className="afi-action-modal" onClick={(e) => e.stopPropagation()}>
         <div className="afi-action-modal__body">
           <h2 className="afi-action-modal__title">{personaNombre}</h2>
-          <div className="afi-action-modal__date">Fecha actual {fechaTexto}</div>
+          <div className="afi-action-modal__date">
+            {isEdit ? "Editando acción" : `Fecha actual ${fechaTexto}`}
+          </div>
 
           {loadingCatalogos ? (
             <div className="afi-action-modal__message">Cargando opciones...</div>
@@ -277,7 +298,7 @@ export default function AccionPersonaModal({
                   <span className="material-symbols-outlined">arrow_drop_down</span>
                 </button>
                 {openMenu === "resultado" ? (
-                  <div className="afi-action-modal__menu is-large">
+                  <div className="afi-action-modal__menu is-large is-resultado">
                     {resultadosFiltrados.map((row) => (
                       <button
                         type="button"
@@ -376,7 +397,7 @@ export default function AccionPersonaModal({
             onClick={handleSubmit}
             disabled={!canSave || saving || loadingCatalogos || Boolean(errorCatalogos)}
           >
-            {saving ? "Guardando..." : "Guardar"}
+            {saving ? "Guardando..." : isEdit ? "Actualizar" : "Guardar"}
           </button>
         </div>
       </div>

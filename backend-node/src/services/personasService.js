@@ -70,6 +70,30 @@ function buildSqlCharValue(value, maxLength) {
   return text.slice(0, maxLength);
 }
 
+
+function aplicarPermisosEdicionAcciones(items, authUser) {
+  const asenumTxt = cleanText(authUser?.asenum);
+  const nowMs = Date.now();
+
+  return (Array.isArray(items) ? items : []).map((item) => {
+    const segundosRestantes = Math.max(
+      0,
+      toNumberOrNull(item?.editableSegundosRestantes) || 0,
+    );
+    const esMismoAsesor = Boolean(
+      asenumTxt && cleanText(item?.asenum) && asenumTxt === cleanText(item.asenum),
+    );
+    const estaEnVentana = Boolean(item?.puedeEditarServidor && segundosRestantes > 0);
+    const editableHastaMs = segundosRestantes > 0 ? nowMs + segundosRestantes * 1000 : null;
+
+    return {
+      ...item,
+      puedeEditar: Boolean(item?.accnum && esMismoAsesor && estaEnVentana),
+      editableHasta: editableHastaMs ? new Date(editableHastaMs).toISOString() : null,
+    };
+  });
+}
+
 function filterItemsByLocalidad(items, localidad) {
   const localidadNorm = normalizeText(localidad);
 
@@ -735,14 +759,132 @@ async function crearAccionPersona({ cedula, authUser, payload }) {
 
   const accnum = toNumberOrNull(insertResult.recordset?.[0]?.accnum);
   const items = await snapshotService.refreshAccionesForDocumento(cedulaTxt);
-
   return {
     accnum,
-    items,
+    items: aplicarPermisosEdicionAcciones(items, authUser),
   };
 }
 
-async function getAccionesPersona({ cedula }) {
+
+async function actualizarAccionPersona({ accnum, authUser, payload }) {
+  const accnumValue = toSmallInt(accnum, "accnum");
+  const asenumTxt = cleanText(authUser?.asenum);
+
+  if (!asenumTxt) {
+    const error = new Error("No se pudo identificar el asesor autenticado");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const acctipo = toSmallInt(payload?.acctipo, "acctipo");
+  const resnum = toSmallInt(payload?.resnum, "resnum");
+  const accvaluacionRaw = Number(payload?.accvaluacion || 0);
+  const accvaluacion = Number.isInteger(accvaluacionRaw)
+    ? Math.max(0, Math.min(5, accvaluacionRaw))
+    : 0;
+
+  const resultado = await validarCatalogoAccion({ acctipo, resnum });
+  const resultadoNorm = normalizeCatalogText(resultado.resnom);
+
+  const accobs = buildSqlCharValue(payload?.accobs, 512);
+  const accdirnvo =
+    resultadoNorm === "DIRECCION NUEVA" || resultadoNorm === "MAIL NUEVO"
+      ? buildSqlCharValue(payload?.accdirnvo, 200)
+      : "";
+  const acctelnvo =
+    resultadoNorm === "TELEFONO INCORRECTO"
+      ? buildSqlCharValue(payload?.acctelnvo, 40)
+      : "";
+
+  if (
+    (resultadoNorm === "DIRECCION NUEVA" || resultadoNorm === "MAIL NUEVO") &&
+    !accdirnvo
+  ) {
+    const error = new Error("Debe ingresar el dato nuevo");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (resultadoNorm === "TELEFONO INCORRECTO" && !acctelnvo) {
+    const error = new Error("Debe ingresar el teléfono nuevo");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pool = await getPool();
+
+  const updateResult = await pool
+    .request()
+    .input("accnum", sql.Int, accnumValue)
+    .input("asenum", sql.Int, Number(asenumTxt))
+    .input("acctipo", sql.SmallInt, acctipo)
+    .input("resnum", sql.SmallInt, resnum)
+    .input("accobs", sql.VarChar(512), accobs || null)
+    .input("accvaluacion", sql.SmallInt, accvaluacion)
+    .input("accobs2", sql.Char(80), "")
+    .input("acctelnvo", sql.Char(40), acctelnvo || null)
+    .input("accdirnvo", sql.Char(200), accdirnvo || null)
+    .query(`
+      UPDATE [dbo].[ACCIONES]
+      SET
+        acctipo = @acctipo,
+        resnum = @resnum,
+        accobs = @accobs,
+        accvaluacion = @accvaluacion,
+        accobs2 = @accobs2,
+        acctelnvo = @acctelnvo,
+        accdirnvo = @accdirnvo
+      OUTPUT INSERTED.accnum, INSERTED.perci
+      WHERE accnum = @accnum
+        AND TRY_CAST(asenum AS int) = @asenum
+        AND acccuando >= DATEADD(MINUTE, -5, SYSDATETIME())
+    `);
+
+  const updated = updateResult.recordset?.[0];
+
+  if (!updated) {
+    const checkResult = await pool
+      .request()
+      .input("accnum", sql.Int, accnumValue)
+      .query(`
+        SELECT TOP (1)
+          accnum,
+          asenum,
+          acccuando,
+          DATEDIFF(SECOND, acccuando, SYSDATETIME()) AS segundos_desde_accion
+        FROM [dbo].[ACCIONES]
+        WHERE accnum = @accnum
+      `);
+
+    const row = checkResult.recordset?.[0];
+
+    if (!row) {
+      const error = new Error("La acción no existe");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (cleanText(row.asenum) !== asenumTxt) {
+      const error = new Error("Solo el asesor que creó la acción puede editarla");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const error = new Error("La acción ya no se puede editar porque pasaron más de 5 minutos");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const cedulaTxt = cleanText(updated.perci);
+  const items = await snapshotService.refreshAccionesForDocumento(cedulaTxt);
+  return {
+    accnum: toNumberOrNull(updated.accnum),
+    cedula: cedulaTxt,
+    items: aplicarPermisosEdicionAcciones(items, authUser),
+  };
+}
+
+async function getAccionesPersona({ cedula, authUser }) {
   const cedulaTxt = String(cedula || "").trim();
 
   if (!cedulaTxt) {
@@ -753,15 +895,19 @@ async function getAccionesPersona({ cedula }) {
 
   await snapshotService.ensureSnapshotReady();
 
-  const snapshotItems = snapshotService.getAccionesByDocumento(cedulaTxt) || [];
+  let snapshotItems = snapshotService.getAccionesByDocumento(cedulaTxt) || [];
 
-  snapshotService.refreshAccionesForDocumento(cedulaTxt).catch((err) => {
+  try {
+    snapshotItems = await snapshotService.refreshAccionesForDocumento(cedulaTxt);
+  } catch (err) {
     console.error("[acciones] refresh puntual error:", err?.message || err);
-  });
+  }
+
+  const items = aplicarPermisosEdicionAcciones(snapshotItems, authUser);
 
   return {
-    total: snapshotItems.length,
-    items: snapshotItems,
+    total: items.length,
+    items,
   };
 }
 
@@ -779,6 +925,7 @@ module.exports = {
   getFiltrosPersonas,
   getAccionesCatalogos,
   crearAccionPersona,
+  actualizarAccionPersona,
   refreshPersonasSnapshot,
   getAccionesPersona,
   getAccionAdjuntoPdf,

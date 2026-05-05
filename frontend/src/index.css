@@ -4260,3 +4260,58 @@ body{
     right: 56px;
   }
 }
+
+/* =========================
+   AFILIACIONES - EDITAR ACCION
+   ========================= */
+
+.afi-action-card__footer-actions{
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.afi-action-card__edit-btn{
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #b61c1c;
+  font-size: clamp(12px, 3.2vw, 15px);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 3px 0;
+  line-height: 1;
+}
+
+.afi-action-card__edit-btn:active{
+  opacity: .7;
+}
+
+
+/* =========================
+   AFILIACIONES - ACCIONES FIX HORA / DROPDOWN
+   ========================= */
+
+/* El listado largo de resultados queda visible y scrolleable dentro de la pantalla. */
+.afi-action-modal__menu.is-resultado{
+  position: fixed;
+  left: max(46px, calc((100vw - 760px) / 2 + 70px));
+  right: max(46px, calc((100vw - 760px) / 2 + 70px));
+  top: min(390px, 44vh);
+  bottom: 118px;
+  max-height: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  z-index: 10005;
+}
+
+@media (max-width: 520px){
+  .afi-action-modal__menu.is-resultado{
+    left: 46px;
+    right: 46px;
+    top: min(385px, 45vh);
+    bottom: 112px;
+  }
+}

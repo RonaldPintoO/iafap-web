@@ -152,11 +152,42 @@ async function crearAccionPersona(req, res) {
   }
 }
 
+
+async function actualizarAccionPersona(req, res) {
+  try {
+    const { accnum } = req.params;
+
+    const data = await personasService.actualizarAccionPersona({
+      accnum,
+      authUser: req.auth?.user,
+      payload: req.body || {},
+    });
+
+    return res.json({
+      ok: true,
+      cedula: data.cedula,
+      accnum: data.accnum,
+      total: data.items.length,
+      items: data.items,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error actualizando acción de la persona",
+    });
+  }
+}
+
 async function getAccionesPersona(req, res) {
   try {
     const { cedula } = req.params;
 
-    const data = await personasService.getAccionesPersona({ cedula });
+    const data = await personasService.getAccionesPersona({
+      cedula,
+      authUser: req.auth?.user,
+    });
 
     return res.json({
       ok: true,
@@ -329,6 +360,7 @@ module.exports = {
   getAccionesCatalogos,
   getAccionesPersona,
   crearAccionPersona,
+  actualizarAccionPersona,
   getAccionAdjuntoPdf,
   getLocalidades,
   getFiltros,

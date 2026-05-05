@@ -91,6 +91,7 @@ export default function Afiliaciones() {
   const [accionesCatalogosError, setAccionesCatalogosError] = useState("");
   const [accionSaving, setAccionSaving] = useState(false);
   const [accionSaveError, setAccionSaveError] = useState("");
+  const [accionEditando, setAccionEditando] = useState(null);
 
   const [mapPoints, setMapPoints] = useState([]);
   const [mapLoading, setMapLoading] = useState(false);
@@ -199,6 +200,7 @@ export default function Afiliaciones() {
     setAccionesPersonaLoading(false);
     setShowAccionModal(false);
     setAccionSaveError("");
+    setAccionEditando(null);
     setVinculosPersona([]);
     setVinculosPersonaError("");
     setVinculosPersonaLoading(false);
@@ -212,6 +214,7 @@ export default function Afiliaciones() {
     setAccionesPersonaLoading(false);
     setShowAccionModal(false);
     setAccionSaveError("");
+    setAccionEditando(null);
   };
 
   const cargarAccionesCatalogos = async () => {
@@ -241,6 +244,19 @@ export default function Afiliaciones() {
   };
 
   const handleOpenNuevaAccion = async () => {
+    setAccionEditando(null);
+    setAccionSaveError("");
+    setShowAccionModal(true);
+
+    if (!accionesCatalogos.tipos.length || !accionesCatalogos.resultados.length) {
+      await cargarAccionesCatalogos();
+    }
+  };
+
+  const handleOpenEditarAccion = async (accion) => {
+    if (!accion?.accnum) return;
+
+    setAccionEditando(accion);
     setAccionSaveError("");
     setShowAccionModal(true);
 
@@ -253,20 +269,25 @@ export default function Afiliaciones() {
     if (accionSaving) return;
     setShowAccionModal(false);
     setAccionSaveError("");
+    setAccionEditando(null);
   };
 
   const handleSaveNuevaAccion = async (payload) => {
     const cedula = String(personaSeleccionada?.cedula || "").trim();
     if (!cedula) return;
 
+    const editandoAccnum = accionEditando?.accnum;
+
     setAccionSaving(true);
     setAccionSaveError("");
 
     try {
       const res = await apiFetch(
-        `/personas/${encodeURIComponent(cedula)}/acciones`,
+        editandoAccnum
+          ? `/personas/acciones/${encodeURIComponent(editandoAccnum)}`
+          : `/personas/${encodeURIComponent(cedula)}/acciones`,
         {
-          method: "POST",
+          method: editandoAccnum ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         },
@@ -275,14 +296,25 @@ export default function Afiliaciones() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data?.ok) {
-        throw new Error(data?.detail || "No se pudo guardar la acción");
+        throw new Error(
+          data?.detail ||
+            (editandoAccnum
+              ? "No se pudo actualizar la acción"
+              : "No se pudo guardar la acción"),
+        );
       }
 
       setAccionesPersona(Array.isArray(data.items) ? data.items : []);
       setShowAccionModal(false);
+      setAccionEditando(null);
       setPersonasReloadToken((prev) => prev + 1);
     } catch (err) {
-      setAccionSaveError(err.message || "No se pudo guardar la acción");
+      setAccionSaveError(
+        err.message ||
+          (editandoAccnum
+            ? "No se pudo actualizar la acción"
+            : "No se pudo guardar la acción"),
+      );
     } finally {
       setAccionSaving(false);
     }
@@ -1098,7 +1130,9 @@ export default function Afiliaciones() {
           accionesCatalogosError={accionesCatalogosError}
           accionSaving={accionSaving}
           accionSaveError={accionSaveError}
+          accionEditando={accionEditando}
           onOpenNuevaAccion={handleOpenNuevaAccion}
+          onOpenEditarAccion={handleOpenEditarAccion}
           onCloseNuevaAccion={handleCloseNuevaAccion}
           onSaveNuevaAccion={handleSaveNuevaAccion}
           onReloadAccionesCatalogos={cargarAccionesCatalogos}

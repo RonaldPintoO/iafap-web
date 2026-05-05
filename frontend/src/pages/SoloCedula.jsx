@@ -1,4 +1,4 @@
-import { authFetch } from '../components/auth/auth.api';
+import { authFetch } from "../components/auth/auth.api";
 import { useEffect, useState } from "react";
 import PersonaDetalle from "../components/afiliaciones/PersonaDetalle";
 
@@ -16,6 +16,7 @@ export default function SoloCedula() {
   const [accionesPersona, setAccionesPersona] = useState([]);
   const [accionesPersonaLoading, setAccionesPersonaLoading] = useState(false);
   const [accionesPersonaError, setAccionesPersonaError] = useState("");
+
   const [showAccionModal, setShowAccionModal] = useState(false);
   const [accionesCatalogos, setAccionesCatalogos] = useState({
     tipos: [],
@@ -24,8 +25,10 @@ export default function SoloCedula() {
   const [accionesCatalogosLoading, setAccionesCatalogosLoading] =
     useState(false);
   const [accionesCatalogosError, setAccionesCatalogosError] = useState("");
+
   const [accionSaving, setAccionSaving] = useState(false);
   const [accionSaveError, setAccionSaveError] = useState("");
+  const [accionEditando, setAccionEditando] = useState(null);
 
   function onChange(e) {
     const clean = onlyDigitsInput(e.target.value).slice(0, 9);
@@ -51,11 +54,11 @@ export default function SoloCedula() {
     setAccionesPersonaError("");
     setShowAccionModal(false);
     setAccionSaveError("");
+    setAccionEditando(null);
 
     try {
       const response = await authFetch(`/solo-cedula/${cedula}`);
       const json = await response.json();
-      console.log(json.data);
 
       if (!response.ok || !json?.ok) {
         throw new Error(json?.error || "No se pudo consultar la cédula.");
@@ -102,17 +105,38 @@ export default function SoloCedula() {
 
   async function abrirNuevaAccion() {
     setAccionSaveError("");
+    setAccionEditando(null);
     setShowAccionModal(true);
 
-    if (!accionesCatalogos.tipos.length || !accionesCatalogos.resultados.length) {
+    if (
+      !accionesCatalogos.tipos.length ||
+      !accionesCatalogos.resultados.length
+    ) {
+      await cargarAccionesCatalogos();
+    }
+  }
+
+  async function abrirEditarAccion(accion) {
+    if (!accion?.accnum) return;
+
+    setAccionSaveError("");
+    setAccionEditando(accion);
+    setShowAccionModal(true);
+
+    if (
+      !accionesCatalogos.tipos.length ||
+      !accionesCatalogos.resultados.length
+    ) {
       await cargarAccionesCatalogos();
     }
   }
 
   function cerrarNuevaAccion() {
     if (accionSaving) return;
+
     setShowAccionModal(false);
     setAccionSaveError("");
+    setAccionEditando(null);
   }
 
   async function guardarNuevaAccion(payload) {
@@ -123,20 +147,41 @@ export default function SoloCedula() {
     setAccionSaveError("");
 
     try {
-      const response = await authFetch(`/personas/${encodeURIComponent(ci)}/acciones`, {
-        method: "POST",
+      const editandoAccnum = accionEditando?.accnum;
+
+      const url = editandoAccnum
+        ? `/personas/acciones/${encodeURIComponent(editandoAccnum)}`
+        : `/personas/${encodeURIComponent(ci)}/acciones`;
+
+      const method = editandoAccnum ? "PUT" : "POST";
+
+      const response = await authFetch(url, {
+        method,
         body: JSON.stringify(payload),
       });
+
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok || !json?.ok) {
-        throw new Error(json?.detail || "No se pudo guardar la acción.");
+        throw new Error(
+          json?.detail ||
+            json?.error ||
+            (editandoAccnum
+              ? "No se pudo actualizar la acción."
+              : "No se pudo guardar la acción."),
+        );
       }
 
       setAccionesPersona(Array.isArray(json.items) ? json.items : []);
       setShowAccionModal(false);
+      setAccionEditando(null);
     } catch (err) {
-      setAccionSaveError(err.message || "No se pudo guardar la acción.");
+      setAccionSaveError(
+        err.message ||
+          (accionEditando?.accnum
+            ? "No se pudo actualizar la acción."
+            : "No se pudo guardar la acción."),
+      );
     } finally {
       setAccionSaving(false);
     }
@@ -152,7 +197,9 @@ export default function SoloCedula() {
       setAccionesPersonaError("");
 
       try {
-        const response = await authFetch(`/personas/${encodeURIComponent(persona.cedula)}/acciones`);
+        const response = await authFetch(
+          `/personas/${encodeURIComponent(persona.cedula)}/acciones`,
+        );
         const json = await response.json();
 
         if (!response.ok || !json?.ok) {
@@ -192,6 +239,7 @@ export default function SoloCedula() {
     setAccionesPersonaError("");
     setShowAccionModal(false);
     setAccionSaveError("");
+    setAccionEditando(null);
   }
 
   if (personaDetalle) {
@@ -210,7 +258,9 @@ export default function SoloCedula() {
         accionesCatalogosError={accionesCatalogosError}
         accionSaving={accionSaving}
         accionSaveError={accionSaveError}
+        accionEditando={accionEditando}
         onOpenNuevaAccion={abrirNuevaAccion}
+        onOpenEditarAccion={abrirEditarAccion}
         onCloseNuevaAccion={cerrarNuevaAccion}
         onSaveNuevaAccion={guardarNuevaAccion}
         onReloadAccionesCatalogos={cargarAccionesCatalogos}
