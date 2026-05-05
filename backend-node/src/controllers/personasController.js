@@ -106,6 +106,52 @@ async function getFiltros(req, res) {
   }
 }
 
+async function getAccionesCatalogos(req, res) {
+  try {
+    const data = await personasService.getAccionesCatalogos();
+
+    return res.json({
+      ok: true,
+      tipos: data.tipos,
+      resultados: data.resultados,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error obteniendo catálogos de acciones",
+    });
+  }
+}
+
+async function crearAccionPersona(req, res) {
+  try {
+    const { cedula } = req.params;
+
+    const data = await personasService.crearAccionPersona({
+      cedula,
+      authUser: req.auth?.user,
+      payload: req.body || {},
+    });
+
+    return res.status(201).json({
+      ok: true,
+      cedula: String(cedula).trim(),
+      accnum: data.accnum,
+      total: data.items.length,
+      items: data.items,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error guardando acción de la persona",
+    });
+  }
+}
+
 async function getAccionesPersona(req, res) {
   try {
     const { cedula } = req.params;
@@ -280,7 +326,9 @@ async function getVinculosPersona(req, res) {
 
 module.exports = {
   getPersonas,
+  getAccionesCatalogos,
   getAccionesPersona,
+  crearAccionPersona,
   getAccionAdjuntoPdf,
   getLocalidades,
   getFiltros,

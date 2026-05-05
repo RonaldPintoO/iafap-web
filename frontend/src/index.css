@@ -3984,3 +3984,279 @@ body{
     font-size: 24px;
   }
 }
+
+/* =========================
+   AFILIACIONES - NUEVA ACCION
+   ========================= */
+
+/* Reutiliza el FAB global de Afiliaciones, pero asegura que quede arriba del detalle */
+.afi-acciones-fab{
+  z-index: 160;
+  background: #ff0d0d;
+}
+
+.afi-acciones-fab .material-symbols-outlined{
+  font-size: clamp(30px, 8vw, 48px);
+  color: #fff;
+}
+
+/* Da espacio inferior para que la última tarjeta no quede tapada por el botón flotante */
+.afi-detail-body--acciones{
+  padding-bottom: 118px;
+}
+
+/* Backdrop pantalla completa estilo app móvil */
+.afi-action-modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(250, 250, 250, .98);
+  display: none;
+  align-items: stretch;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.afi-action-modal-backdrop.is-open{
+  display: flex;
+}
+
+.afi-action-modal{
+  width: min(760px, 100vw);
+  min-height: 100vh;
+  background: #fafafa;
+  color: #222;
+  display: flex;
+  flex-direction: column;
+}
+
+.afi-action-modal__body{
+  flex: 1 1 auto;
+  padding: 46px clamp(28px, 9vw, 70px) 24px;
+}
+
+.afi-action-modal__title{
+  margin: 0;
+  text-align: center;
+  font-size: clamp(30px, 7vw, 45px);
+  line-height: 1.1;
+  font-weight: 400;
+  color: #777;
+  text-transform: uppercase;
+}
+
+.afi-action-modal__date{
+  margin-top: 44px;
+  margin-bottom: 48px;
+  text-align: center;
+  font-size: clamp(20px, 5vw, 30px);
+  color: #777;
+}
+
+.afi-action-modal__field{
+  position: relative;
+  margin-top: 28px;
+}
+
+.afi-action-modal__select{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #222;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 0 8px;
+  font-size: clamp(22px, 5.4vw, 30px);
+  text-align: left;
+  cursor: pointer;
+}
+
+.afi-action-modal__select:disabled{
+  color: #999;
+  cursor: not-allowed;
+}
+
+.afi-action-modal__select .material-symbols-outlined{
+  color: #777;
+  font-size: clamp(24px, 6vw, 34px);
+}
+
+.afi-action-modal__menu{
+  position: absolute;
+  left: 0;
+  right: 64px;
+  top: calc(100% + 4px);
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 14px 32px rgba(0,0,0,.18);
+  overflow: auto;
+  max-height: 260px;
+  z-index: 10002;
+  padding: 10px 0;
+}
+
+.afi-action-modal__menu.is-large{
+  max-height: min(72vh, 640px);
+}
+
+.afi-action-modal__menu-item{
+  width: 100%;
+  border: 0;
+  background: #fff;
+  color: #111;
+  display: block;
+  text-align: left;
+  padding: 18px 18px;
+  font-size: clamp(22px, 5vw, 30px);
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.afi-action-modal__menu-item:hover{
+  background: #f5f5f5;
+}
+
+.afi-action-stars{
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 3vw, 18px);
+  margin-top: 24px;
+  padding-left: 0;
+}
+
+.afi-action-stars__btn{
+  border: 0;
+  background: transparent;
+  color: #dedede;
+  font-size: clamp(54px, 14vw, 86px);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.afi-action-stars__btn.is-active{
+  color: #777;
+}
+
+.afi-action-modal__input-row{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: end;
+  margin-top: 54px;
+}
+
+.afi-action-modal__input-wrap,
+.afi-action-modal__text-field{
+  min-width: 0;
+}
+
+.afi-action-modal__textarea,
+.afi-action-modal__input{
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: #555;
+  font-size: clamp(20px, 4.7vw, 28px);
+  line-height: 1.3;
+  padding: 0;
+}
+
+.afi-action-modal__textarea::placeholder,
+.afi-action-modal__input::placeholder{
+  color: #aaa;
+}
+
+.afi-action-modal__underline{
+  height: 2px;
+  background: #777;
+  margin-top: 12px;
+}
+
+.afi-action-modal__mic{
+  width: clamp(56px, 14vw, 90px);
+  height: clamp(56px, 14vw, 90px);
+  border: 0;
+  background: #fff;
+  color: #777;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.afi-action-modal__mic.is-listening{
+  color: #b91c1c;
+}
+
+.afi-action-modal__mic .material-symbols-outlined{
+  font-size: clamp(28px, 7vw, 42px);
+}
+
+.afi-action-modal__text-field{
+  margin-top: 58px;
+}
+
+.afi-action-modal__hint,
+.afi-action-modal__message{
+  margin-top: 16px;
+  color: #777;
+  font-size: clamp(14px, 3.6vw, 18px);
+}
+
+.afi-action-modal__hint.is-error,
+.afi-action-modal__message.is-error{
+  color: #c62828;
+}
+
+.afi-action-modal__retry{
+  margin-left: 12px;
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.afi-action-modal__actions{
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px clamp(28px, 9vw, 70px) 56px;
+}
+
+.afi-action-modal__button{
+  min-width: min(42vw, 260px);
+  border: 0;
+  border-radius: 4px;
+  background: #d6d8d8;
+  color: #222;
+  box-shadow: 0 4px 10px rgba(0,0,0,.14);
+  padding: 16px 20px;
+  font-size: clamp(20px, 4.7vw, 28px);
+  cursor: pointer;
+}
+
+.afi-action-modal__button:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px){
+  .afi-action-modal__body{
+    padding-top: 42px;
+  }
+
+  .afi-action-modal__date{
+    margin-top: 42px;
+    margin-bottom: 44px;
+  }
+
+  .afi-action-modal__menu{
+    right: 56px;
+  }
+}

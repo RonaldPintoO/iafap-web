@@ -4,6 +4,7 @@ export default function DetalleAcciones({
   accionesPersona,
   accionesPersonaLoading,
   accionesPersonaError,
+  onOpenNuevaAccion,
 }) {
   const handleOpenAdjunto = async (accion) => {
     if (!accion?.accnum || !accion?.tieneAdjuntoVisible) return;
@@ -14,44 +15,58 @@ export default function DetalleAcciones({
       );
 
       if (!response.ok) {
-        throw new Error('No se pudo abrir el adjunto');
+        throw new Error("No se pudo abrir el adjunto");
       }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
-      window.alert(error.message || 'No se pudo abrir el adjunto');
+      window.alert(error.message || "No se pudo abrir el adjunto");
     }
   };
 
+  const renderFab = () => (
+    <button
+      type="button"
+      className="afi-fab afi-acciones-fab"
+      aria-label="Agregar acción"
+      onClick={onOpenNuevaAccion}
+    >
+      <span className="material-symbols-outlined">add</span>
+    </button>
+  );
+
   if (accionesPersonaLoading) {
     return (
-      <div className="afi-detail-body">
+      <div className="afi-detail-body afi-detail-body--acciones">
         <div className="afi-empty">Cargando acciones...</div>
+        {renderFab()}
       </div>
     );
   }
 
   if (accionesPersonaError) {
     return (
-      <div className="afi-detail-body">
+      <div className="afi-detail-body afi-detail-body--acciones">
         <div className="afi-empty">{accionesPersonaError}</div>
+        {renderFab()}
       </div>
     );
   }
 
   if (!accionesPersona.length) {
     return (
-      <div className="afi-detail-body">
+      <div className="afi-detail-body afi-detail-body--acciones">
         <div className="afi-empty">Sin acciones para mostrar.</div>
+        {renderFab()}
       </div>
     );
   }
 
   return (
-    <div className="afi-detail-body">
+    <div className="afi-detail-body afi-detail-body--acciones">
       <div className="afi-detail-actions">
         {accionesPersona.map((accion, idx) => {
           const estadoClass =
@@ -123,6 +138,8 @@ export default function DetalleAcciones({
           );
         })}
       </div>
+
+      {renderFab()}
     </div>
   );
 }

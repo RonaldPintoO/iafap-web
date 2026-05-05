@@ -5,6 +5,7 @@ import DetalleVinculos from "./DetalleVinculos";
 import DetalleAcciones from "./DetalleAcciones";
 import DetalleBps from "./DetalleBps";
 import DetalleFormulario from "./DetalleFormulario";
+import AccionPersonaModal from "./AccionPersonaModal";
 import useDetalleBps from "../../hooks/useDetalleBps";
 import useDetalleFormulario from "../../hooks/useDetalleFormulario";
 
@@ -24,6 +25,16 @@ export default function PersonaDetalle({
   vinculosInfoModal = [],
   vinculosInfoModalLoading = false,
   vinculosInfoModalError = "",
+  showAccionModal = false,
+  accionesCatalogos = { tipos: [], resultados: [] },
+  accionesCatalogosLoading = false,
+  accionesCatalogosError = "",
+  accionSaving = false,
+  accionSaveError = "",
+  onOpenNuevaAccion,
+  onCloseNuevaAccion,
+  onSaveNuevaAccion,
+  onReloadAccionesCatalogos,
 }) {
   const bps = useDetalleBps(item, detalleTab);
   const formulario = useDetalleFormulario(item, detalleTab);
@@ -50,6 +61,7 @@ export default function PersonaDetalle({
           accionesPersona={accionesPersona}
           accionesPersonaLoading={accionesPersonaLoading}
           accionesPersonaError={accionesPersonaError}
+          onOpenNuevaAccion={onOpenNuevaAccion}
         />
       )}
       {detalleTab === "bps" && <DetalleBps {...bps} />}
@@ -62,6 +74,19 @@ export default function PersonaDetalle({
       >
         <span className="material-symbols-outlined">assignment</span>
       </button>
+
+      <AccionPersonaModal
+        show={showAccionModal}
+        item={item}
+        catalogos={accionesCatalogos}
+        loadingCatalogos={accionesCatalogosLoading}
+        errorCatalogos={accionesCatalogosError}
+        saving={accionSaving}
+        error={accionSaveError}
+        onClose={onCloseNuevaAccion}
+        onSave={onSaveNuevaAccion}
+        onReloadCatalogos={onReloadAccionesCatalogos}
+      />
     </div>
   );
 }

@@ -41,6 +41,16 @@ export default function PersonasPanel({
   vinculosInfoModalError,
   onOpenVinculoDelVinculo,
   onOpenFormularioModal,
+  showAccionModal,
+  accionesCatalogos,
+  accionesCatalogosLoading,
+  accionesCatalogosError,
+  accionSaving,
+  accionSaveError,
+  onOpenNuevaAccion,
+  onCloseNuevaAccion,
+  onSaveNuevaAccion,
+  onReloadAccionesCatalogos,
 }) {
   if (personaSeleccionada) {
     return (
@@ -60,6 +70,16 @@ export default function PersonasPanel({
         vinculosInfoModalError={vinculosInfoModalError}
         onSelectVinculo={onOpenVinculoDelVinculo}
         onOpenFormularioModal={onOpenFormularioModal}
+        showAccionModal={showAccionModal}
+        accionesCatalogos={accionesCatalogos}
+        accionesCatalogosLoading={accionesCatalogosLoading}
+        accionesCatalogosError={accionesCatalogosError}
+        accionSaving={accionSaving}
+        accionSaveError={accionSaveError}
+        onOpenNuevaAccion={onOpenNuevaAccion}
+        onCloseNuevaAccion={onCloseNuevaAccion}
+        onSaveNuevaAccion={onSaveNuevaAccion}
+        onReloadAccionesCatalogos={onReloadAccionesCatalogos}
       />
     );
   }

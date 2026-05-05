@@ -33,6 +33,43 @@ function toNumberOrNull(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+
+const RESULTADOS_ACCIONES_VISIBLES = [
+  "DIRECCION NUEVA",
+  "FIN DE SEMANA",
+  "GEO MANUAL",
+  "LLAMADA AGENDADA",
+  "MAIL NUEVO",
+  "NO ATIENDE",
+  "NO ESTABA",
+  "NO HABIA NADIE",
+  "NO VIVE AHI",
+  "SIN ACTIVIDAD",
+  "TELEFONO INCORRECTO",
+];
+
+function normalizeCatalogText(value) {
+  return normalizeText(value).replace(/\s+/g, " ");
+}
+
+function toSmallInt(value, fieldName) {
+  const n = Number(value);
+
+  if (!Number.isInteger(n)) {
+    const error = new Error(`${fieldName} debe ser numérico`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return n;
+}
+
+function buildSqlCharValue(value, maxLength) {
+  const text = cleanText(value);
+  if (!text) return "";
+  return text.slice(0, maxLength);
+}
+
 function filterItemsByLocalidad(items, localidad) {
   const localidadNorm = normalizeText(localidad);
 
@@ -471,6 +508,240 @@ async function refreshPersonasSnapshot() {
   });
 }
 
+async function getAccionesCatalogos() {
+  const pool = await getPool();
+  const visibles = RESULTADOS_ACCIONES_VISIBLES.map(normalizeCatalogText);
+
+  const tiposResult = await pool.request().query(`
+    SELECT
+      ta_num,
+      LTRIM(RTRIM(ta_nom)) AS ta_nom,
+      ta_tipo,
+      ta_activo
+    FROM [dbo].[TIPOACCION]
+    WHERE ta_activo = 1
+    ORDER BY ta_num
+  `);
+
+  const request = pool.request();
+  visibles.forEach((name, idx) => {
+    request.input(`resnom${idx}`, sql.VarChar(80), name);
+  });
+
+  const inList = visibles.map((_, idx) => `@resnom${idx}`).join(", ");
+
+  const resultadosResult = await request.query(`
+    SELECT
+      resnum,
+      LTRIM(RTRIM(resnom)) AS resnom,
+      restipo,
+      rescelular,
+      restransfiere,
+      resestrellas,
+      rescheck,
+      resnvodir,
+      resnvotel,
+      resagendar
+    FROM [dbo].[RESULTADOS]
+    WHERE UPPER(LTRIM(RTRIM(resnom))) COLLATE Latin1_General_CI_AI IN (${inList})
+    ORDER BY
+      CASE UPPER(LTRIM(RTRIM(resnom))) COLLATE Latin1_General_CI_AI
+        WHEN 'DIRECCION NUEVA' THEN 1
+        WHEN 'FIN DE SEMANA' THEN 2
+        WHEN 'GEO MANUAL' THEN 3
+        WHEN 'LLAMADA AGENDADA' THEN 4
+        WHEN 'MAIL NUEVO' THEN 5
+        WHEN 'NO ATIENDE' THEN 6
+        WHEN 'NO ESTABA' THEN 7
+        WHEN 'NO HABIA NADIE' THEN 8
+        WHEN 'NO VIVE AHI' THEN 9
+        WHEN 'SIN ACTIVIDAD' THEN 10
+        WHEN 'TELEFONO INCORRECTO' THEN 11
+        ELSE 99
+      END,
+      resnom
+  `);
+
+  return {
+    tipos: (tiposResult.recordset || []).map((row) => ({
+      ta_num: toNumberOrNull(row.ta_num),
+      ta_nom: cleanText(row.ta_nom),
+      ta_tipo: toNumberOrNull(row.ta_tipo),
+      ta_activo: toNumberOrNull(row.ta_activo),
+    })),
+    resultados: (resultadosResult.recordset || []).map((row) => ({
+      resnum: toNumberOrNull(row.resnum),
+      resnom: cleanText(row.resnom),
+      restipo: toNumberOrNull(row.restipo),
+      rescelular: toNumberOrNull(row.rescelular),
+      restransfiere: toNumberOrNull(row.restransfiere),
+      resestrellas: toNumberOrNull(row.resestrellas),
+      rescheck: toNumberOrNull(row.rescheck),
+      resnvodir: toNumberOrNull(row.resnvodir),
+      resnvotel: toNumberOrNull(row.resnvotel),
+      resagendar: toNumberOrNull(row.resagendar),
+    })),
+  };
+}
+
+async function validarCatalogoAccion({ acctipo, resnum }) {
+  const pool = await getPool();
+
+  const tipoResult = await pool
+    .request()
+    .input("acctipo", sql.SmallInt, acctipo)
+    .query(`
+      SELECT TOP (1) ta_num
+      FROM [dbo].[TIPOACCION]
+      WHERE ta_num = @acctipo
+        AND ta_activo = 1
+    `);
+
+  if (!tipoResult.recordset?.[0]) {
+    const error = new Error("El tipo de acción no está habilitado");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const visibles = RESULTADOS_ACCIONES_VISIBLES.map(normalizeCatalogText);
+  const request = pool.request().input("resnum", sql.SmallInt, resnum);
+
+  visibles.forEach((name, idx) => {
+    request.input(`resnom${idx}`, sql.VarChar(80), name);
+  });
+
+  const inList = visibles.map((_, idx) => `@resnom${idx}`).join(", ");
+
+  const resultadoResult = await request.query(`
+    SELECT TOP (1)
+      resnum,
+      LTRIM(RTRIM(resnom)) AS resnom,
+      restipo
+    FROM [dbo].[RESULTADOS]
+    WHERE resnum = @resnum
+      AND UPPER(LTRIM(RTRIM(resnom))) COLLATE Latin1_General_CI_AI IN (${inList})
+  `);
+
+  const resultado = resultadoResult.recordset?.[0];
+
+  if (!resultado) {
+    const error = new Error("El resultado seleccionado no está habilitado");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return resultado;
+}
+
+async function crearAccionPersona({ cedula, authUser, payload }) {
+  const cedulaTxt = cleanText(cedula);
+  const asenumTxt = cleanText(authUser?.asenum);
+
+  if (!cedulaTxt) {
+    const error = new Error("Cédula requerida");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!asenumTxt) {
+    const error = new Error("No se pudo identificar el asesor autenticado");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const acctipo = toSmallInt(payload?.acctipo, "acctipo");
+  const resnum = toSmallInt(payload?.resnum, "resnum");
+  const accvaluacionRaw = Number(payload?.accvaluacion || 0);
+  const accvaluacion = Number.isInteger(accvaluacionRaw)
+    ? Math.max(0, Math.min(5, accvaluacionRaw))
+    : 0;
+
+  const resultado = await validarCatalogoAccion({ acctipo, resnum });
+  const resultadoNorm = normalizeCatalogText(resultado.resnom);
+
+  const accobs = buildSqlCharValue(payload?.accobs, 512);
+  const accdirnvo =
+    resultadoNorm === "DIRECCION NUEVA" || resultadoNorm === "MAIL NUEVO"
+      ? buildSqlCharValue(payload?.accdirnvo, 200)
+      : "";
+  const acctelnvo =
+    resultadoNorm === "TELEFONO INCORRECTO"
+      ? buildSqlCharValue(payload?.acctelnvo, 40)
+      : "";
+
+  if (
+    (resultadoNorm === "DIRECCION NUEVA" || resultadoNorm === "MAIL NUEVO") &&
+    !accdirnvo
+  ) {
+    const error = new Error("Debe ingresar el dato nuevo");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (resultadoNorm === "TELEFONO INCORRECTO" && !acctelnvo) {
+    const error = new Error("Debe ingresar el teléfono nuevo");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pool = await getPool();
+
+  const insertResult = await pool
+    .request()
+    .input("acctipo", sql.SmallInt, acctipo)
+    .input("resnum", sql.SmallInt, resnum)
+    .input("accobs", sql.VarChar(512), accobs || null)
+    .input("accvaluacion", sql.SmallInt, accvaluacion)
+    .input("perci", sql.Int, Number(cedulaTxt))
+    .input("asenum", sql.Int, Number(asenumTxt))
+    .input("accobs2", sql.Char(80), "")
+    .input("acctelnvo", sql.Char(40), acctelnvo || null)
+    .input("accdirnvo", sql.Char(200), accdirnvo || null)
+    .query(`
+      INSERT INTO [dbo].[ACCIONES] (
+        acccuando,
+        acctipo,
+        resnum,
+        accobs,
+        acccontacto,
+        accmedio,
+        accvaluacion,
+        perci,
+        asenum,
+        accobs2,
+        acctelnvo,
+        accdirnvo,
+        accext,
+        accadjunto
+      )
+      OUTPUT INSERTED.accnum
+      VALUES (
+        SYSDATETIME(),
+        @acctipo,
+        @resnum,
+        @accobs,
+        CONVERT(datetime, '17530101', 112),
+        0,
+        @accvaluacion,
+        @perci,
+        @asenum,
+        @accobs2,
+        @acctelnvo,
+        @accdirnvo,
+        NULL,
+        NULL
+      )
+    `);
+
+  const accnum = toNumberOrNull(insertResult.recordset?.[0]?.accnum);
+  const items = await snapshotService.refreshAccionesForDocumento(cedulaTxt);
+
+  return {
+    accnum,
+    items,
+  };
+}
+
 async function getAccionesPersona({ cedula }) {
   const cedulaTxt = String(cedula || "").trim();
 
@@ -506,6 +777,8 @@ module.exports = {
   getPersonas,
   getLocalidades,
   getFiltrosPersonas,
+  getAccionesCatalogos,
+  crearAccionPersona,
   refreshPersonasSnapshot,
   getAccionesPersona,
   getAccionAdjuntoPdf,

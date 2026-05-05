@@ -81,6 +81,16 @@ export default function Afiliaciones() {
   const [accionesPersona, setAccionesPersona] = useState([]);
   const [accionesPersonaLoading, setAccionesPersonaLoading] = useState(false);
   const [accionesPersonaError, setAccionesPersonaError] = useState("");
+  const [showAccionModal, setShowAccionModal] = useState(false);
+  const [accionesCatalogos, setAccionesCatalogos] = useState({
+    tipos: [],
+    resultados: [],
+  });
+  const [accionesCatalogosLoading, setAccionesCatalogosLoading] =
+    useState(false);
+  const [accionesCatalogosError, setAccionesCatalogosError] = useState("");
+  const [accionSaving, setAccionSaving] = useState(false);
+  const [accionSaveError, setAccionSaveError] = useState("");
 
   const [mapPoints, setMapPoints] = useState([]);
   const [mapLoading, setMapLoading] = useState(false);
@@ -187,6 +197,8 @@ export default function Afiliaciones() {
     setAccionesPersona([]);
     setAccionesPersonaError("");
     setAccionesPersonaLoading(false);
+    setShowAccionModal(false);
+    setAccionSaveError("");
     setVinculosPersona([]);
     setVinculosPersonaError("");
     setVinculosPersonaLoading(false);
@@ -198,6 +210,82 @@ export default function Afiliaciones() {
     setAccionesPersona([]);
     setAccionesPersonaError("");
     setAccionesPersonaLoading(false);
+    setShowAccionModal(false);
+    setAccionSaveError("");
+  };
+
+  const cargarAccionesCatalogos = async () => {
+    setAccionesCatalogosLoading(true);
+    setAccionesCatalogosError("");
+
+    try {
+      const res = await apiFetch("/personas/acciones/catalogos");
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.detail || "No se pudieron cargar las opciones");
+      }
+
+      setAccionesCatalogos({
+        tipos: Array.isArray(data.tipos) ? data.tipos : [],
+        resultados: Array.isArray(data.resultados) ? data.resultados : [],
+      });
+    } catch (err) {
+      setAccionesCatalogos({ tipos: [], resultados: [] });
+      setAccionesCatalogosError(
+        err.message || "No se pudieron cargar las opciones",
+      );
+    } finally {
+      setAccionesCatalogosLoading(false);
+    }
+  };
+
+  const handleOpenNuevaAccion = async () => {
+    setAccionSaveError("");
+    setShowAccionModal(true);
+
+    if (!accionesCatalogos.tipos.length || !accionesCatalogos.resultados.length) {
+      await cargarAccionesCatalogos();
+    }
+  };
+
+  const handleCloseNuevaAccion = () => {
+    if (accionSaving) return;
+    setShowAccionModal(false);
+    setAccionSaveError("");
+  };
+
+  const handleSaveNuevaAccion = async (payload) => {
+    const cedula = String(personaSeleccionada?.cedula || "").trim();
+    if (!cedula) return;
+
+    setAccionSaving(true);
+    setAccionSaveError("");
+
+    try {
+      const res = await apiFetch(
+        `/personas/${encodeURIComponent(cedula)}/acciones`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.detail || "No se pudo guardar la acción");
+      }
+
+      setAccionesPersona(Array.isArray(data.items) ? data.items : []);
+      setShowAccionModal(false);
+      setPersonasReloadToken((prev) => prev + 1);
+    } catch (err) {
+      setAccionSaveError(err.message || "No se pudo guardar la acción");
+    } finally {
+      setAccionSaving(false);
+    }
   };
 
   const handleResetPersonas = async () => {
@@ -1004,6 +1092,16 @@ export default function Afiliaciones() {
           vinculosInfoModal={vinculosInfoModal}
           vinculosInfoModalLoading={vinculosInfoModalLoading}
           vinculosInfoModalError={vinculosInfoModalError}
+          showAccionModal={showAccionModal}
+          accionesCatalogos={accionesCatalogos}
+          accionesCatalogosLoading={accionesCatalogosLoading}
+          accionesCatalogosError={accionesCatalogosError}
+          accionSaving={accionSaving}
+          accionSaveError={accionSaveError}
+          onOpenNuevaAccion={handleOpenNuevaAccion}
+          onCloseNuevaAccion={handleCloseNuevaAccion}
+          onSaveNuevaAccion={handleSaveNuevaAccion}
+          onReloadAccionesCatalogos={cargarAccionesCatalogos}
         />
       )}
 

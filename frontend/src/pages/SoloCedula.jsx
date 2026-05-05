@@ -16,6 +16,16 @@ export default function SoloCedula() {
   const [accionesPersona, setAccionesPersona] = useState([]);
   const [accionesPersonaLoading, setAccionesPersonaLoading] = useState(false);
   const [accionesPersonaError, setAccionesPersonaError] = useState("");
+  const [showAccionModal, setShowAccionModal] = useState(false);
+  const [accionesCatalogos, setAccionesCatalogos] = useState({
+    tipos: [],
+    resultados: [],
+  });
+  const [accionesCatalogosLoading, setAccionesCatalogosLoading] =
+    useState(false);
+  const [accionesCatalogosError, setAccionesCatalogosError] = useState("");
+  const [accionSaving, setAccionSaving] = useState(false);
+  const [accionSaveError, setAccionSaveError] = useState("");
 
   function onChange(e) {
     const clean = onlyDigitsInput(e.target.value).slice(0, 9);
@@ -39,6 +49,8 @@ export default function SoloCedula() {
     setDetalleTab("datos");
     setAccionesPersona([]);
     setAccionesPersonaError("");
+    setShowAccionModal(false);
+    setAccionSaveError("");
 
     try {
       const response = await authFetch(`/solo-cedula/${cedula}`);
@@ -59,6 +71,74 @@ export default function SoloCedula() {
       setError(err.message || "Ocurrió un error al consultar la cédula.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function cargarAccionesCatalogos() {
+    setAccionesCatalogosLoading(true);
+    setAccionesCatalogosError("");
+
+    try {
+      const response = await authFetch("/personas/acciones/catalogos");
+      const json = await response.json().catch(() => ({}));
+
+      if (!response.ok || !json?.ok) {
+        throw new Error(json?.detail || "No se pudieron cargar las opciones.");
+      }
+
+      setAccionesCatalogos({
+        tipos: Array.isArray(json.tipos) ? json.tipos : [],
+        resultados: Array.isArray(json.resultados) ? json.resultados : [],
+      });
+    } catch (err) {
+      setAccionesCatalogos({ tipos: [], resultados: [] });
+      setAccionesCatalogosError(
+        err.message || "No se pudieron cargar las opciones.",
+      );
+    } finally {
+      setAccionesCatalogosLoading(false);
+    }
+  }
+
+  async function abrirNuevaAccion() {
+    setAccionSaveError("");
+    setShowAccionModal(true);
+
+    if (!accionesCatalogos.tipos.length || !accionesCatalogos.resultados.length) {
+      await cargarAccionesCatalogos();
+    }
+  }
+
+  function cerrarNuevaAccion() {
+    if (accionSaving) return;
+    setShowAccionModal(false);
+    setAccionSaveError("");
+  }
+
+  async function guardarNuevaAccion(payload) {
+    const ci = String(persona?.cedula || "").trim();
+    if (!ci) return;
+
+    setAccionSaving(true);
+    setAccionSaveError("");
+
+    try {
+      const response = await authFetch(`/personas/${encodeURIComponent(ci)}/acciones`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const json = await response.json().catch(() => ({}));
+
+      if (!response.ok || !json?.ok) {
+        throw new Error(json?.detail || "No se pudo guardar la acción.");
+      }
+
+      setAccionesPersona(Array.isArray(json.items) ? json.items : []);
+      setShowAccionModal(false);
+    } catch (err) {
+      setAccionSaveError(err.message || "No se pudo guardar la acción.");
+    } finally {
+      setAccionSaving(false);
     }
   }
 
@@ -110,6 +190,8 @@ export default function SoloCedula() {
     setDetalleTab("datos");
     setAccionesPersona([]);
     setAccionesPersonaError("");
+    setShowAccionModal(false);
+    setAccionSaveError("");
   }
 
   if (personaDetalle) {
@@ -122,6 +204,16 @@ export default function SoloCedula() {
         accionesPersona={accionesPersona}
         accionesPersonaLoading={accionesPersonaLoading}
         accionesPersonaError={accionesPersonaError}
+        showAccionModal={showAccionModal}
+        accionesCatalogos={accionesCatalogos}
+        accionesCatalogosLoading={accionesCatalogosLoading}
+        accionesCatalogosError={accionesCatalogosError}
+        accionSaving={accionSaving}
+        accionSaveError={accionSaveError}
+        onOpenNuevaAccion={abrirNuevaAccion}
+        onCloseNuevaAccion={cerrarNuevaAccion}
+        onSaveNuevaAccion={guardarNuevaAccion}
+        onReloadAccionesCatalogos={cargarAccionesCatalogos}
       />
     );
   }
