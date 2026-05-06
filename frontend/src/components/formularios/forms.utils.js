@@ -372,19 +372,22 @@ export function getLocalidadOptions(localidades = []) {
 export function formatDateTimeParts(value) {
   if (!value) return { fecha: "Pendiente", hora: "" };
 
-  // SQL Server DATETIME no tiene zona horaria. El driver/API puede serializarlo
-  // como ISO con "Z" y el navegador lo convierte a hora local, restando 3 horas
-  // en Uruguay. Para el listado de formularios debemos mostrar la hora tal como
-  // está grabada en SQL, igual que la APK, sin conversión de zona horaria.
-  if (typeof value === "string") {
-    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
-    if (match) {
-      const [, yyyy, mm, dd, hh, mi] = match;
-      return {
-        fecha: `${Number(dd)}/${Number(mm)}/${yyyy}`,
-        hora: `${hh}:${mi}`,
-      };
-    }
+  const text = String(value).trim();
+
+  const sqlMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?/);
+  if (sqlMatch) {
+    const [, yyyy, mm, dd, hh = "", min = ""] = sqlMatch;
+    const fecha = `${Number(dd)}/${Number(mm)}/${yyyy}`;
+    const hora = hh && min ? `${hh}:${min}` : "";
+    return { fecha, hora };
+  }
+
+  const ddmmyyyy = text.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (ddmmyyyy) {
+    const [, dd, mm, yyyy, hh = "", min = ""] = ddmmyyyy;
+    const fecha = `${Number(dd)}/${Number(mm)}/${yyyy}`;
+    const hora = hh && min ? `${hh}:${min}` : "";
+    return { fecha, hora };
   }
 
   const dt = new Date(value);
@@ -401,30 +404,33 @@ export function formatDateTimeParts(value) {
 
 export function resolveFormularioVisual(row) {
   return {
-    estadoTxt: cleanText(row?.estadoTxt || row?.estadoTexto || row?.foraccion || "Pendiente"),
-    color: cleanText(row?.color || row?.estadoColor || "#ffffff"),
-    estatus: cleanText(row?.estatus || "En Proceso"),
-    borderColor: cleanText(row?.borderColor || row?.estadoBorderColor || ""),
+    estadoTxt: cleanText(row?.estadoTexto || row?.foraccion || "Pendiente"),
+    estadoDetalle: cleanText(row?.estadoDetalle),
+    color: cleanText(row?.estadoColor) || "#ffa000",
+    estatus: cleanText(row?.estadoFiltro) || "Todos",
+    borderColor: cleanText(row?.estadoBorde),
   };
 }
 
 export function mapFormularioItem(row) {
   const { fecha, hora } = formatDateTimeParts(row?.forcuando);
   const visual = resolveFormularioVisual(row);
+  const distancia = Number(row?.forauto || 0) === 1 ? ">100km" : "<100km";
+  const proyectoAsesor = cleanText(row?.forproyase) || cleanText(row?.forproy);
 
   return {
     id: row?.fornum ? String(row.fornum) : "",
-    ci: "",
-    fo: cleanText(row?.fordetalle),
-    proy: cleanText(row?.proyectoTexto || ""),
-    km: "",
+    detalle: cleanText(row?.fordetalle),
+    proy: proyectoAsesor || "—",
+    km: proyectoAsesor ? distancia : "",
     fecha,
     hora,
     estadoTxt: visual.estadoTxt,
+    estadoDetalle: visual.estadoDetalle,
     color: visual.color,
     estatus: visual.estatus,
     borderColor: visual.borderColor || "",
-    asesor: cleanText(row?.asesorTexto || ""),
+    asesor: row?.forquien_env ? String(row.forquien_env) : "",
     raw: row,
   };
 }

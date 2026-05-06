@@ -1,12 +1,14 @@
 export default function FormsList({ items, onItemClick }) {
   const estadoOrden = [
     "Pendiente",
-    "Recibido sin errores",
-    "En proceso",
+    "ENV",
+    "OA",
+    "REP",
+    "OK",
     "BPS",
-    "Rechazado",
-    "Sin Actividad",
-    "Anulado",
+    "BSA",
+    "NOK",
+    "REC",
   ];
 
   const sortedItems = [...items].sort((a, b) => {
@@ -16,13 +18,9 @@ export default function FormsList({ items, onItemClick }) {
     const ordenA = estadoA === -1 ? 999 : estadoA;
     const ordenB = estadoB === -1 ? 999 : estadoB;
 
-    // Orden por estado
-    if (ordenA !== ordenB) {
-      return ordenA - ordenB;
-    }
+    if (ordenA !== ordenB) return ordenA - ordenB;
 
-    // Mismo estado → ordenar por id
-    return a.id - b.id;
+    return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
   });
 
   return (
@@ -30,74 +28,74 @@ export default function FormsList({ items, onItemClick }) {
       {sortedItems.length === 0 ? (
         <div className="forms-empty">(Sin resultados)</div>
       ) : (
-        sortedItems.map((it) => (
-          <div
-            className={`forms-item ${
-              it.estadoTxt === "Pendiente" ? "is-clickable" : ""
-            }`}
-            key={it.id}
-            onClick={() => {
-              if (it.estadoTxt === "Pendiente") {
-                onItemClick?.(it);
-              }
-            }}
-            role="button"
-            tabIndex={it.estadoTxt === "Pendiente" ? 0 : -1}
-            onKeyDown={(e) => {
-              if (
-                it.estadoTxt === "Pendiente" &&
-                (e.key === "Enter" || e.key === " ")
-              ) {
-                onItemClick?.(it);
-              }
-            }}
-          >
+        sortedItems.map((it) => {
+          const isPendiente = it.estadoTxt === "Pendiente";
+
+          return (
             <div
-              className="forms-item__bar"
-              style={{
-                background: it.color,
-                border: it.borderColor ? `1px solid ${it.borderColor}` : "none",
+              className={`forms-item ${isPendiente ? "is-clickable" : ""}`}
+              key={it.id}
+              onClick={() => {
+                if (isPendiente) onItemClick?.(it);
               }}
-            />
+              role="button"
+              tabIndex={isPendiente ? 0 : -1}
+              onKeyDown={(e) => {
+                if (isPendiente && (e.key === "Enter" || e.key === " ")) {
+                  onItemClick?.(it);
+                }
+              }}
+            >
+              <div
+                className="forms-item__bar"
+                style={{
+                  background: it.color,
+                  border: it.borderColor ? `1px solid ${it.borderColor}` : "none",
+                }}
+              />
 
-            <div className="forms-item__body">
-              <div className="forms-item__top">
-                <div className="forms-item__id">{it.id}</div>
+              <div className="forms-item__body">
+                <div className="forms-item__top">
+                  <div className="forms-item__id">{it.id}</div>
 
-                <div className="forms-item__main">
-                  {(it.ci && it.ci !== "—") || it.fo ? (
-                    <div className="forms-item__line">
-                      {it.ci && it.ci !== "—" ? (
-                        <span className="forms-item__ci">CI:{it.ci}</span>
-                      ) : null}{" "}
-                      {it.fo}
-                    </div>
-                  ) : null}
+                  <div className="forms-item__main">
+                    {it.detalle ? (
+                      <div className="forms-item__line">{it.detalle}</div>
+                    ) : null}
 
-                  {(it.proy && it.proy !== "—") || it.km ? (
-                    <div className="forms-item__line">
-                      {it.proy && it.proy !== "—" ? it.proy : ""}{" "}
-                      {it.km}
-                    </div>
-                  ) : null}
+                    {(it.proy && it.proy !== "—") || it.km ? (
+                      <div className="forms-item__line">
+                        {it.proy && it.proy !== "—" ? `Proy.${it.proy}` : ""} {it.km}
+                      </div>
+                    ) : null}
 
-                  {it.asesor ? (
-                    <div className="forms-item__line">{it.asesor}</div>
-                  ) : null}
+                    {it.asesor ? (
+                      <div className="forms-item__line">Asesor: {it.asesor}</div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
 
-              <div className="forms-item__bottom">
-                <div className="forms-item__dt">
-                  <div>{it.fecha}</div>
-                  <div>{it.hora}</div>
+                <div className="forms-item__bottom">
+                  <div className="forms-item__dt">
+                    <div>{it.fecha}</div>
+                    <div>{it.hora}</div>
+                  </div>
+
+                  <div className="forms-item__estado">
+                    <div>{it.estadoTxt}</div>
+                    {it.estadoDetalle ? (
+                      <div className="forms-item__estado-detalle">
+                        {it.estadoDetalle.split("\n").map((linea, idx) => (
+                          <div key={`${it.id}-detalle-${idx}`}>{linea}</div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-
-                <div className="forms-item__estado">{it.estadoTxt}</div>
               </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );

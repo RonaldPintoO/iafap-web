@@ -27,103 +27,6 @@ function normalizeText(value) {
     .toUpperCase();
 }
 
-
-function buildFormularioVisual(row) {
-  const accion = normalizeText(row.foraccion);
-  const accionDetalle = cleanText(row.foraccion_detalle);
-  const detalleFormulario = cleanText(row.fordetalle);
-  const rechazo = normalizeText(row.rechnom);
-  const forrechnum = cleanText(row.forrechnum);
-
-  if (!accion && !detalleFormulario) {
-    return {
-      estadoTxt: "Pendiente",
-      estatus: "En Proceso",
-      color: "#ffffff",
-      borderColor: "#000000",
-      estadoCodigo: "PENDIENTE",
-      estadoDetalle: "",
-    };
-  }
-
-  if (accion === "ENV" || accion === "SOL") {
-    return {
-      estadoTxt: accion,
-      estatus: "En Proceso",
-      color: "#ffa000",
-      borderColor: "",
-      estadoCodigo: accion,
-      estadoDetalle: accionDetalle,
-    };
-  }
-
-  if (accion === "OK") {
-    return {
-      estadoTxt: "OK",
-      estatus: "Inactivos",
-      color: "#97d49a",
-      borderColor: "",
-      estadoCodigo: "OK",
-      estadoDetalle: accionDetalle,
-    };
-  }
-
-  if (accion === "BPS") {
-    return {
-      estadoTxt: "BPS",
-      estatus: "Inactivos",
-      color: "#43a047",
-      borderColor: "",
-      estadoCodigo: "BPS",
-      estadoDetalle: accionDetalle,
-    };
-  }
-
-  if (accion === "REC") {
-    // Para el listado replicamos el comportamiento base del APK: la acción visible es REC.
-    // El rechazo queda disponible para diagnóstico/detalle, pero no reemplaza automáticamente la acción.
-    return {
-      estadoTxt: "REC",
-      estatus: "Inactivos",
-      color: "#000000",
-      borderColor: "",
-      estadoCodigo: "REC",
-      estadoDetalle: accionDetalle,
-    };
-  }
-
-  if (accionDetalle) {
-    return {
-      estadoTxt: accionDetalle,
-      estatus: "En Proceso",
-      color: "#ffa000",
-      borderColor: "",
-      estadoCodigo: accion || "DETALLE",
-      estadoDetalle: accionDetalle,
-    };
-  }
-
-  if (rechazo && forrechnum && forrechnum !== "0") {
-    return {
-      estadoTxt: cleanText(row.rechnom),
-      estatus: "Inactivos",
-      color: "#000000",
-      borderColor: "",
-      estadoCodigo: accion || "RECHAZO",
-      estadoDetalle: accionDetalle,
-    };
-  }
-
-  return {
-    estadoTxt: cleanText(row.foraccion) || "En proceso",
-    estatus: "En Proceso",
-    color: "#ffa000",
-    borderColor: "",
-    estadoCodigo: accion || "EN_PROCESO",
-    estadoDetalle: accionDetalle,
-  };
-}
-
 function safePeriodoDias(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return 30;
@@ -282,6 +185,81 @@ function validarFormularioNumero(value) {
   return fornum;
 }
 
+
+function sameMeaning(a, b) {
+  const aa = normalizeText(a);
+  const bb = normalizeText(b);
+  return Boolean(aa && bb && aa === bb);
+}
+
+function buildEstadoDetalleFromUltima(row) {
+  const detalles = [];
+  const forrechnum = Number(row.forrechnum || 0);
+  const rechnom = cleanText(row.rechnom);
+  const fordetalleAccion = cleanText(row.foracciondetalle);
+
+  if (forrechnum > 0 && rechnom) {
+    detalles.push(rechnom);
+  }
+
+  if (
+    fordetalleAccion &&
+    !detalles.some((detalle) => sameMeaning(detalle, fordetalleAccion))
+  ) {
+    detalles.push(fordetalleAccion);
+  }
+
+  return detalles.join("\n");
+}
+
+function buildFormularioVisualDesdeApk(row) {
+  const accion = cleanText(row.foraccion).toUpperCase();
+  const detalle = buildEstadoDetalleFromUltima(row);
+  const forestado = row.forestado != null ? Number(row.forestado) : null;
+
+  if (!accion) {
+    return {
+      estadoTexto: "Pendiente",
+      estadoCodigo: "PENDIENTE",
+      estadoDetalle: "",
+      estadoColor: "#ffffff",
+      estadoBorde: "#000000",
+      estadoFiltro: "En Proceso",
+    };
+  }
+
+  const colores = {
+    ENV: "#ffa000",
+    REC: "#000000",
+    OK: "#97d49a",
+    BPS: "#43a047",
+    BSA: "#43a047",
+    NOK: "#d32f2f",
+    OA: "#ffa000",
+    REP: "#ffa000",
+  };
+
+  const filtros = {
+    ENV: "En Proceso",
+    OA: "En Proceso",
+    REP: "En Proceso",
+    REC: "Inactivos",
+    OK: "Activos",
+    BPS: "Activos",
+    BSA: "Activos",
+    NOK: "Inactivos",
+  };
+
+  return {
+    estadoTexto: accion,
+    estadoCodigo: accion,
+    estadoDetalle: detalle,
+    estadoColor: colores[accion] || "#ffa000",
+    estadoBorde: "",
+    estadoFiltro: filtros[accion] || (forestado === 1 ? "En Proceso" : "Todos"),
+  };
+}
+
 async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Todos" }) {
   const asesor = validarAsesor(asenum);
   const dias = safePeriodoDias(periodoDias);
@@ -317,9 +295,9 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
             f1.[fornum]
           , f1.[forcuando]
           , LTRIM(RTRIM(f1.[foraccion])) AS [foraccion]
-          , LTRIM(RTRIM(f1.[fordetalle])) AS [fordetalle]
+          , LTRIM(RTRIM(f1.[fordetalle])) AS [foracciondetalle]
           , f1.[forrechnum]
-          , r.[rechnom]
+          , LTRIM(RTRIM(COALESCE(r.[rechnom], ''))) AS [rechnom]
           , r.[rechdev]
           , f1.[fordias]
           , f1.[forpec]
@@ -342,7 +320,7 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
             ELSE ''
           END AS [fordetalle]
         , COALESCE(u.[foraccion], '') AS [foraccion]
-        , COALESCE(u.[fordetalle], '') AS [foraccion_detalle]
+        , COALESCE(u.[foracciondetalle], '') AS [foracciondetalle]
         , u.[forrechnum]
         , LTRIM(RTRIM(COALESCE(u.[rechnom], ''))) AS [rechnom]
         , u.[rechdev]
@@ -383,11 +361,13 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
     .query(query);
 
   let items = (result.recordset || []).map((row) => {
-    const base = {
+    const visual = buildFormularioVisualDesdeApk(row);
+
+    return {
       fornum: row.fornum != null ? String(row.fornum).trim() : "",
       forcuando: row.forcuando || null,
       foraccion: cleanText(row.foraccion),
-      foraccion_detalle: cleanText(row.foraccion_detalle),
+      foracciondetalle: cleanText(row.foracciondetalle),
       forquien_env: cleanText(row.forquien_env),
       forpromoto: cleanText(row.forpromoto),
       fordetalle: cleanText(row.fordetalle),
@@ -402,23 +382,18 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
       forauto: row.forauto != null ? Number(row.forauto) : 0,
       forproy: row.forproy != null ? String(row.forproy).trim() : "",
       forproyase: row.forproyase != null ? String(row.forproyase).trim() : "",
-    };
-
-    const visual = buildFormularioVisual(base);
-    const distanciaTexto = Number(base.forauto || 0) === 1 ? ">100km" : "<100km";
-    const proyectoVisible = base.forproyase || base.forproy || "";
-
-    return {
-      ...base,
-      ...visual,
-      proyectoTexto: proyectoVisible ? `Proy.${proyectoVisible} ${distanciaTexto}` : "",
-      asesorTexto: base.forquien_env ? `Asesor: ${base.forquien_env}` : "",
+      estadoCodigo: visual.estadoCodigo,
+      estadoTexto: visual.estadoTexto,
+      estadoDetalle: visual.estadoDetalle,
+      estadoColor: visual.estadoColor,
+      estadoBorde: visual.estadoBorde,
+      estadoFiltro: visual.estadoFiltro,
     };
   });
 
   const filtro = normalizeText(estatus);
   if (filtro && filtro !== "TODOS") {
-    items = items.filter((item) => normalizeText(item.estatus) === filtro);
+    items = items.filter((item) => normalizeText(item.estadoFiltro) === filtro);
   }
 
   return {
