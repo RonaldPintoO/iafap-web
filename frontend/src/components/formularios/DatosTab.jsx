@@ -3,14 +3,12 @@ import FieldSelect from "./FieldSelect";
 import FieldDate from "./FieldDate";
 
 import {
-  PROYECTOS_DEMO,
   DISTANCIAS,
   TIPOS_DOC,
   CODIGO_CI,
   cleanNumbers,
   cleanAlphaNum,
   formatMoney,
-  validarCedulaUruguaya,
 } from "./forms.utils";
 
 export default function DatosTab({
@@ -19,22 +17,18 @@ export default function DatosTab({
   paisOptions = [],
   departamentoOptions = [],
   localidadOptions = [],
+  proyectoOptions = [],
+  formularioOptions = [],
+  onFormularioChange,
   loadingCatalogos = false,
   errorCatalogos = "",
 }) {
   const set = (k, v) => setDatos((d) => ({ ...d, [k]: v }));
 
-  const cedulaEsCI = datos.tipoDocumento === "CI";
+  const tipoDocumento = datos.tipoDocumento || "CI";
+  const documentoError = !String(datos.cedula || "").trim();
 
-  const cedulaValida =
-    !cedulaEsCI ||
-    datos.cedula.trim() === "" ||
-    validarCedulaUruguaya(datos.cedula);
-
-  const formatterDoc = cedulaEsCI ? cleanNumbers : cleanAlphaNum;
-
-  const aplicaCodCI = datos.pais === "URUGUAY" && datos.tipoDocumento === "CI";
-
+  const aplicaCodCI = datos.pais === "URUGUAY" && tipoDocumento === "CI";
   const noAplicaCodCI = !aplicaCodCI;
 
   return (
@@ -47,8 +41,9 @@ export default function DatosTab({
         <FieldSelect
           label="Proyecto"
           value={datos.proyecto}
-          options={PROYECTOS_DEMO}
+          options={proyectoOptions}
           onChange={(v) => set("proyecto", v)}
+          placeholder={proyectoOptions.length ? "Seleccionar" : "Sin proyectos vigentes"}
         />
 
         <FieldSelect
@@ -64,22 +59,34 @@ export default function DatosTab({
           label="Asesor"
           value={datos.asesor}
           onChange={(v) => set("asesor", v)}
+          disabled
         />
 
         <FieldInput
           label="Asesor Form."
           value={datos.asesorForm}
           onChange={(v) => set("asesorForm", v)}
+          disabled
         />
       </div>
 
       <div className="forms-datos-row two">
-        <FieldInput
+        <FieldSelect
           label="Formulario"
           value={datos.formulario}
-          onChange={(v) => set("formulario", v)}
-          formatter={cleanNumbers}
-          inputMode="numeric"
+          options={formularioOptions}
+          onChange={(v) => {
+            if (onFormularioChange) {
+              onFormularioChange(v);
+              return;
+            }
+            set("formulario", v);
+          }}
+          placeholder={
+            formularioOptions.length
+              ? "Seleccione formulario pendiente"
+              : "Sin formularios pendientes"
+          }
         />
 
         <FieldDate
@@ -121,7 +128,7 @@ export default function DatosTab({
       <div className="forms-datos-row two">
         <FieldSelect
           label="Tipo Documento"
-          value={datos.tipoDocumento}
+          value={tipoDocumento}
           options={TIPOS_DOC}
           onChange={(v) =>
             setDatos((d) => {
@@ -146,9 +153,10 @@ export default function DatosTab({
           label="Documento"
           value={datos.cedula}
           onChange={(v) => set("cedula", v)}
-          formatter={formatterDoc}
-          inputMode={cedulaEsCI ? "numeric" : "text"}
-          error={!cedulaValida}
+          formatter={cleanNumbers}
+          inputMode="numeric"
+          placeholder={tipoDocumento === "CI" ? "Documento" : "Ingrese CI ficticia numérica"}
+          error={documentoError}
         />
       </div>
 
@@ -244,23 +252,9 @@ export default function DatosTab({
       </div>
 
       <div className="forms-datos-row three">
-        <FieldInput
-          label="Número de Puerta"
-          value={datos.nro}
-          onChange={(v) => set("nro", v)}
-        />
-
-        <FieldInput
-          label="Apartamento"
-          value={datos.apto}
-          onChange={(v) => set("apto", v)}
-        />
-
-        <FieldInput
-          label="Bis"
-          value={datos.bis}
-          onChange={(v) => set("bis", v)}
-        />
+        <FieldInput label="Número de Puerta" value={datos.nro} onChange={(v) => set("nro", v)} />
+        <FieldInput label="Apartamento" value={datos.apto} onChange={(v) => set("apto", v)} />
+        <FieldInput label="Bis" value={datos.bis} onChange={(v) => set("bis", v)} />
       </div>
 
       <div className="forms-datos-row one">

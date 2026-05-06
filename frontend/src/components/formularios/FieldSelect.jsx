@@ -18,12 +18,16 @@ export default function FieldSelect({
       >
         <option value="">{placeholder}</option>
 
-        {options.map((opt) => {
+        {options.map((opt, index) => {
           const optionValue = typeof opt === "string" ? opt : opt.value;
           const optionLabel = typeof opt === "string" ? opt : opt.label;
+          const optionKey =
+            typeof opt === "string"
+              ? `${optionValue}-${index}`
+              : opt.key || opt.idlocalidad || `${optionValue}-${index}`;
 
           return (
-            <option key={optionValue} value={optionValue}>
+            <option key={optionKey} value={optionValue}>
               {optionLabel}
             </option>
           );

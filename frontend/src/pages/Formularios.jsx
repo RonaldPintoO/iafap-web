@@ -2,18 +2,32 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   buildDefaultDatos,
+  buildFormularioPayload,
   getDepartamentoOptions,
   getLocalidadOptions,
+  getFormularioPendienteOptions,
   getNombrePaisOptions,
+  getProyectoOptions,
+  todayInputDate,
   getPeriodoDias,
   mapFormularioItem,
+  mergeFormularioDetalleToDatos,
 } from "../components/formularios/forms.utils";
 
-import { fetchFormularios } from "../components/formularios/formularios.api";
+import {
+  enviarFormulario,
+  fetchFormularioDetalle,
+  fetchFormularios,
+  fetchFormulariosPendientes,
+  fetchProyectosFormulario,
+  verificarFormulario,
+} from "../components/formularios/formularios.api";
 import {
   fetchFormulariosCatalogos,
   fetchLocalidadesByDepartamento,
 } from "../components/formularios/formularios.catalogos.api";
+import { validateFormularioPayload } from "../components/formularios/forms.validators";
+import { getAuthSession } from "../components/auth/auth.storage";
 
 import FormsToolbar from "../components/formularios/FormsToolbar";
 import FormsList from "../components/formularios/FormsList";
@@ -30,6 +44,8 @@ export default function Formularios() {
   const [addTab, setAddTab] = useState("datos");
 
   const [itemsRaw, setItemsRaw] = useState([]);
+  const [formulariosPendientes, setFormulariosPendientes] = useState([]);
+  const [proyectos, setProyectos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -40,6 +56,7 @@ export default function Formularios() {
   const [localidades, setLocalidades] = useState([]);
 
   const [datos, setDatos] = useState(() => buildDefaultDatos());
+  const [saving, setSaving] = useState(false);
 
   const paisOptions = useMemo(() => getNombrePaisOptions(paises), [paises]);
   const departamentoOptions = useMemo(
@@ -52,26 +69,69 @@ export default function Formularios() {
   );
 
   const items = useMemo(() => itemsRaw.map(mapFormularioItem), [itemsRaw]);
+  const formularioOptions = useMemo(
+    () => getFormularioPendienteOptions(formulariosPendientes, datos.formulario),
+    [formulariosPendientes, datos.formulario],
+  );
+
+  const proyectoOptions = useMemo(
+    () => getProyectoOptions(proyectos, datos.proyecto),
+    [proyectos, datos.proyecto],
+  );
+
+  const getAsesorLogueado = () => {
+    const session = getAuthSession();
+    return session?.user?.asenum ? String(session.user.asenum) : "";
+  };
 
   const closeAdd = () => {
+    if (saving) return;
     setShowAdd(false);
     setOpenDropdownId(null);
   };
 
   const resetAdd = () => {
-    setDatos(
-      buildDefaultDatos({
-        paises,
-        departamentos,
-        localidades,
-      }),
-    );
+    const asesorCodigo = getAsesorLogueado();
+    setDatos({
+      ...buildDefaultDatos({ paises, departamentos, localidades }),
+      asesor: asesorCodigo,
+      asesorForm: asesorCodigo,
+      fechaForm: todayInputDate(),
+    });
     setAddTab("datos");
+  };
+
+  const reloadFormularios = async () => {
+    const data = await fetchFormularios({
+      periodoDias: getPeriodoDias(periodo),
+      estatus,
+    });
+    setItemsRaw(data.items || []);
+  };
+
+  const reloadFormulariosPendientes = async () => {
+    const data = await fetchFormulariosPendientes();
+    setFormulariosPendientes(data.items || []);
+    return data.items || [];
+  };
+
+  const reloadProyectos = async (fecha = datos.fechaForm || todayInputDate()) => {
+    const data = await fetchProyectosFormulario(fecha);
+    const items = data.items || [];
+    setProyectos(items);
+    setDatos((prev) => {
+      const actualExiste = items.some((p) => String(p.ProyectoId) === String(prev.proyecto));
+      return {
+        ...prev,
+        proyecto: actualExiste ? prev.proyecto : String(items[0]?.ProyectoId || prev.proyecto || ""),
+      };
+    });
+    return items;
   };
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !saving) {
         setOpenDropdownId(null);
         setShowInfo(false);
         setShowAdd(false);
@@ -80,7 +140,7 @@ export default function Formularios() {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [saving]);
 
   useEffect(() => {
     let ignore = false;
@@ -100,25 +160,21 @@ export default function Formularios() {
         let localidadesIniciales = [];
 
         if (primerDepartamento) {
-          localidadesIniciales =
-            await fetchLocalidadesByDepartamento(primerDepartamento);
+          localidadesIniciales = await fetchLocalidadesByDepartamento(primerDepartamento);
           if (ignore) return;
         }
 
         setLocalidades(localidadesIniciales);
-
-        setDatos(
-          buildDefaultDatos({
-            paises: data.paises || [],
-            departamentos: data.departamentos || [],
-            localidades: localidadesIniciales || [],
-          }),
-        );
+        const asesorCodigo = getAsesorLogueado();
+        setDatos({
+          ...buildDefaultDatos({ paises: data.paises || [] }),
+          asesor: asesorCodigo,
+          asesorForm: asesorCodigo,
+          fechaForm: todayInputDate(),
+        });
       } catch (err) {
         if (!ignore) {
-          setCatalogosError(
-            err.message || "No se pudieron cargar los catálogos.",
-          );
+          setCatalogosError(err.message || "No se pudieron cargar los catálogos.");
         }
       } finally {
         if (!ignore) setCatalogosLoading(false);
@@ -144,27 +200,74 @@ export default function Formularios() {
           estatus,
         });
 
-        if (!ignore) {
-          setItemsRaw(data.items || []);
-        }
+        if (!ignore) setItemsRaw(data.items || []);
       } catch (err) {
         if (!ignore) {
           setItemsRaw([]);
           setError(err.message || "No se pudieron cargar los formularios.");
         }
       } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+        if (!ignore) setLoading(false);
       }
     }
 
     loadFormularios();
-
     return () => {
       ignore = true;
     };
   }, [periodo, estatus]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadPendientes() {
+      try {
+        const data = await fetchFormulariosPendientes();
+        if (!ignore) setFormulariosPendientes(data.items || []);
+      } catch (err) {
+        if (!ignore) {
+          console.warn("[Formularios] No se pudieron cargar pendientes:", err);
+          setFormulariosPendientes([]);
+        }
+      }
+    }
+
+    loadPendientes();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadProyectos() {
+      try {
+        const data = await fetchProyectosFormulario(datos.fechaForm || todayInputDate());
+        if (ignore) return;
+
+        const items = data.items || [];
+        setProyectos(items);
+        setDatos((prev) => {
+          const actualExiste = items.some((p) => String(p.ProyectoId) === String(prev.proyecto));
+          return {
+            ...prev,
+            proyecto: actualExiste ? prev.proyecto : String(items[0]?.ProyectoId || prev.proyecto || ""),
+          };
+        });
+      } catch (err) {
+        if (!ignore) {
+          console.warn("[Formularios] No se pudieron cargar proyectos:", err);
+          setProyectos([]);
+        }
+      }
+    }
+
+    if (showAdd) loadProyectos();
+    return () => {
+      ignore = true;
+    };
+  }, [datos.fechaForm, showAdd]);
 
   useEffect(() => {
     let ignore = false;
@@ -183,32 +286,118 @@ export default function Formularios() {
         setLocalidades(items);
 
         setDatos((prev) => {
-          const actualExiste = items.some(
-            (loc) => (loc.localidad || loc) === prev.localidad,
-          );
-
+          const actualExiste = items.some((loc) => (loc.localidad || loc) === prev.localidad);
           return {
             ...prev,
-            localidad: actualExiste
-              ? prev.localidad
-              : items[0]?.localidad || "",
+            localidad: actualExiste ? prev.localidad : items[0]?.localidad || "",
           };
         });
       } catch {
-        if (!ignore) {
-          setLocalidades([]);
-        }
+        if (!ignore) setLocalidades([]);
       }
     }
 
-    if (showAdd) {
-      loadLocalidades();
-    }
-
+    if (showAdd) loadLocalidades();
     return () => {
       ignore = true;
     };
   }, [datos.departamento, showAdd]);
+
+  const cargarDetalleFormulario = async ({ fornum, asesor = "" }) => {
+    const formulario = String(fornum || "").trim();
+    if (!formulario) {
+      setDatos((prev) => ({ ...prev, formulario: "" }));
+      return;
+    }
+
+    const hoy = todayInputDate();
+
+    setDatos((prev) => ({
+      ...prev,
+      formulario,
+      asesor: getAsesorLogueado() || asesor || prev.asesor,
+      asesorForm: getAsesorLogueado() || asesor || prev.asesorForm,
+      fechaForm: prev.fechaForm || hoy,
+    }));
+
+    try {
+      const detalle = await fetchFormularioDetalle(formulario);
+      setDatos((prev) =>
+        mergeFormularioDetalleToDatos(
+          {
+            ...prev,
+            formulario,
+            asesor: getAsesorLogueado() || asesor || prev.asesor,
+            asesorForm: getAsesorLogueado() || asesor || prev.asesorForm,
+            fechaForm: prev.fechaForm || hoy,
+          },
+          detalle.item,
+          { asesorLogueado: getAsesorLogueado() || asesor },
+        ),
+      );
+    } catch (err) {
+      console.warn("[Formularios] No se pudo cargar detalle:", err);
+    }
+  };
+
+  const handleFormularioChange = async (fornum) => {
+    const option = formularioOptions.find((opt) => opt.value === fornum);
+    await cargarDetalleFormulario({
+      fornum,
+      asesor: option?.asesor || "",
+    });
+  };
+
+  const handleOpenFormulario = async (item) => {
+    setAddTab("datos");
+    setShowAdd(true);
+    await cargarDetalleFormulario({
+      fornum: item.id,
+      asesor: item.asesor,
+    });
+  };
+
+  const handleSubmit = async () => {
+    const validation = validateFormularioPayload(datos);
+
+    if (validation.errors.length) {
+      window.alert(validation.errors.join("\n"));
+      setAddTab("datos");
+      return;
+    }
+
+    for (const warning of validation.warnings) {
+      const ok = window.confirm(warning);
+      if (!ok) return;
+    }
+
+    try {
+      setSaving(true);
+
+      const verificacion = await verificarFormulario({
+        formulario: datos.formulario,
+        asesorForm: datos.asesorForm,
+      });
+
+      if (!verificacion.ok || verificacion.resultado !== "correcto") {
+        window.alert("Verifique el número de formulario.");
+        return;
+      }
+
+      const payload = buildFormularioPayload(datos);
+      await enviarFormulario(datos.formulario, payload);
+
+      window.alert("Formulario ingresado con éxito.");
+      closeAdd();
+      resetAdd();
+      await reloadFormularios();
+      await reloadFormulariosPendientes();
+    } catch (err) {
+      window.alert(err.message || "Error al insertar el formulario.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="forms-page">
@@ -226,22 +415,7 @@ export default function Formularios() {
       ) : error ? (
         <div className="forms-empty">{error}</div>
       ) : (
-        <FormsList
-          items={items}
-          onItemClick={(item) => {
-            const hoy = new Date().toISOString().slice(0, 10); // formato YYYY-MM-DD
-            setDatos((prev) => ({
-              ...prev,
-              formulario: item.id,
-              asesor: item.asesor,
-              asesorForm: item.asesor,
-              fechaForm: hoy,
-            }));
-
-            setAddTab("datos");
-            setShowAdd(true);
-          }}
-        />
+        <FormsList items={items} onItemClick={handleOpenFormulario} />
       )}
 
       <button
@@ -258,8 +432,15 @@ export default function Formularios() {
         className="forms-fab"
         aria-label="Agregar"
         onClick={() => {
+          resetAdd();
           setShowAdd(true);
           setAddTab("datos");
+          reloadFormulariosPendientes().catch((err) => {
+            console.warn("[Formularios] No se pudieron recargar pendientes:", err);
+          });
+          reloadProyectos(todayInputDate()).catch((err) => {
+            console.warn("[Formularios] No se pudieron recargar proyectos:", err);
+          });
         }}
       >
         <span className="material-symbols-outlined">add</span>
@@ -277,13 +458,13 @@ export default function Formularios() {
         paisOptions={paisOptions}
         departamentoOptions={departamentoOptions}
         localidadOptions={localidadOptions}
+        proyectoOptions={proyectoOptions}
+        formularioOptions={formularioOptions}
+        onFormularioChange={handleFormularioChange}
         loadingCatalogos={catalogosLoading}
         errorCatalogos={catalogosError}
-        onSubmit={() => {
-          console.log("[Formularios] Guardar:", { datos });
-          closeAdd();
-          resetAdd();
-        }}
+        saving={saving}
+        onSubmit={handleSubmit}
       />
     </div>
   );

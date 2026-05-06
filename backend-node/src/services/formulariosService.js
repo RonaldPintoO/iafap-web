@@ -6,11 +6,122 @@ function cleanText(value) {
   return String(value).trim();
 }
 
+function truncateText(value, maxLength) {
+  const text = cleanText(value);
+  if (!text) return "";
+  return text.length > maxLength ? text.slice(0, maxLength) : text;
+}
+
+function optionalText(value, maxLength) {
+  const text = truncateText(value, maxLength);
+  if (!text) return "";
+  const upper = normalizeText(text);
+  if (upper === "SELECCIONAR" || upper === "SIN SELECCION" || upper === "SIN SELECCIONAR") return "";
+  return text;
+}
+
 function normalizeText(value) {
   return cleanText(value)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
+}
+
+
+function buildFormularioVisual(row) {
+  const accion = normalizeText(row.foraccion);
+  const accionDetalle = cleanText(row.foraccion_detalle);
+  const detalleFormulario = cleanText(row.fordetalle);
+  const rechazo = normalizeText(row.rechnom);
+  const forrechnum = cleanText(row.forrechnum);
+
+  if (!accion && !detalleFormulario) {
+    return {
+      estadoTxt: "Pendiente",
+      estatus: "En Proceso",
+      color: "#ffffff",
+      borderColor: "#000000",
+      estadoCodigo: "PENDIENTE",
+      estadoDetalle: "",
+    };
+  }
+
+  if (accion === "ENV" || accion === "SOL") {
+    return {
+      estadoTxt: accion,
+      estatus: "En Proceso",
+      color: "#ffa000",
+      borderColor: "",
+      estadoCodigo: accion,
+      estadoDetalle: accionDetalle,
+    };
+  }
+
+  if (accion === "OK") {
+    return {
+      estadoTxt: "OK",
+      estatus: "Inactivos",
+      color: "#97d49a",
+      borderColor: "",
+      estadoCodigo: "OK",
+      estadoDetalle: accionDetalle,
+    };
+  }
+
+  if (accion === "BPS") {
+    return {
+      estadoTxt: "BPS",
+      estatus: "Inactivos",
+      color: "#43a047",
+      borderColor: "",
+      estadoCodigo: "BPS",
+      estadoDetalle: accionDetalle,
+    };
+  }
+
+  if (accion === "REC") {
+    // Para el listado replicamos el comportamiento base del APK: la acción visible es REC.
+    // El rechazo queda disponible para diagnóstico/detalle, pero no reemplaza automáticamente la acción.
+    return {
+      estadoTxt: "REC",
+      estatus: "Inactivos",
+      color: "#000000",
+      borderColor: "",
+      estadoCodigo: "REC",
+      estadoDetalle: accionDetalle,
+    };
+  }
+
+  if (accionDetalle) {
+    return {
+      estadoTxt: accionDetalle,
+      estatus: "En Proceso",
+      color: "#ffa000",
+      borderColor: "",
+      estadoCodigo: accion || "DETALLE",
+      estadoDetalle: accionDetalle,
+    };
+  }
+
+  if (rechazo && forrechnum && forrechnum !== "0") {
+    return {
+      estadoTxt: cleanText(row.rechnom),
+      estatus: "Inactivos",
+      color: "#000000",
+      borderColor: "",
+      estadoCodigo: accion || "RECHAZO",
+      estadoDetalle: accionDetalle,
+    };
+  }
+
+  return {
+    estadoTxt: cleanText(row.foraccion) || "En proceso",
+    estatus: "En Proceso",
+    color: "#ffa000",
+    borderColor: "",
+    estadoCodigo: accion || "EN_PROCESO",
+    estadoDetalle: accionDetalle,
+  };
 }
 
 function safePeriodoDias(value) {
@@ -20,18 +131,101 @@ function safePeriodoDias(value) {
   return Math.min(Math.floor(n), 365);
 }
 
+function parseIntOrNull(value) {
+  const text = cleanText(value).replace(/\D/g, "");
+  if (!text) return null;
+  const n = Number(text);
+  if (!Number.isInteger(n)) return null;
+  if (n > 2147483647) return null;
+  return n;
+}
+
+function parseSmallIntOrNull(value) {
+  const n = parseIntOrNull(value);
+  if (n === null) return null;
+  if (n < -32768 || n > 32767) return null;
+  return n;
+}
+
+function parseDecimalOrNull(value) {
+  const text = cleanText(value).replace(/,/g, ".");
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+function distanciaToFlag(value) {
+  const text = normalizeText(value);
+  return text.includes("+100") ? 1 : 0;
+}
+
+function parseMoneyOrNull(value) {
+  const text = cleanText(value).replace(/\./g, "").replace(/,/g, ".");
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseDateOrNull(value) {
+  const text = cleanText(value);
+  if (!text) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return new Date(`${text}T00:00:00`);
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
+    const [dd, mm, yyyy] = text.split("/");
+    return new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+  }
+
+  return null;
+}
+
+function dateToInput(rowValue) {
+  if (!rowValue) return "";
+
+  if (typeof rowValue === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(rowValue)) {
+    const [dd, mm, yyyy] = rowValue.split("/");
+    const year = Number(yyyy);
+    if (!Number.isFinite(year) || year < 1900) return "";
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  const d = new Date(rowValue);
+  if (Number.isNaN(d.getTime())) return "";
+  if (d.getFullYear() < 1900) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function base64ToBuffer(value) {
+  const text = cleanText(value);
+  if (!text) return null;
+
+  const commaIndex = text.indexOf(",");
+  const base64 = commaIndex >= 0 ? text.slice(commaIndex + 1) : text;
+
+  try {
+    return Buffer.from(base64, "base64");
+  } catch {
+    return null;
+  }
+}
+
+function bufferToDataUrl(value) {
+  if (!value) return "";
+  if (Buffer.isBuffer(value)) return `data:image/jpeg;base64,${value.toString("base64")}`;
+  return "";
+}
+
 function buildStatusFilter(estatus) {
   const value = normalizeText(estatus);
 
-  if (!value || value === "TODOS") {
-    return "";
-  }
+  if (!value || value === "TODOS") return "";
 
   if (value === "ACTIVOS") {
     return `
-      AND (
-        UPPER(LTRIM(RTRIM(COALESCE(u.foraccion, '')))) = 'OK'
-      )
+      AND UPPER(LTRIM(RTRIM(COALESCE(u.foraccion, '')))) = 'OK'
     `;
   }
 
@@ -68,144 +262,167 @@ function buildStatusFilter(estatus) {
   return "";
 }
 
-async function getFormulariosByAsesor({
-  asenum,
-  periodoDias = 30,
-  estatus = "Todos",
-}) {
-  const asesor = cleanText(asenum);
-
+function validarAsesor(asenum) {
+  const asesor = parseIntOrNull(asenum);
   if (!asesor) {
     const error = new Error("Asesor autenticado no válido");
     error.statusCode = 400;
     throw error;
   }
+  return asesor;
+}
 
+function validarFormularioNumero(value) {
+  const fornum = parseIntOrNull(value);
+  if (!fornum) {
+    const error = new Error("Número de formulario no válido");
+    error.statusCode = 400;
+    throw error;
+  }
+  return fornum;
+}
+
+async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Todos" }) {
+  const asesor = validarAsesor(asenum);
   const dias = safePeriodoDias(periodoDias);
   const pool = await getPool();
-  const statusFilter = buildStatusFilter(estatus);
 
   const query = `
     WITH PeriodoActual AS (
-      SELECT TOP 1
-            c.[ciefec]
-          , c.[ciehas]
-      FROM [afapformularios].[dbo].[CIERRES] c
+      SELECT TOP 1 c.[ciefec], c.[ciehas]
+      FROM [afapformularios].[dbo].[CIERRES] c WITH (NOLOCK)
       WHERE c.[ciefec] <= CAST(GETDATE() AS date)
         AND c.[ciefec] >= '2026-01-01'
       ORDER BY c.[ciefec] DESC
     ),
     FormulariosBase AS (
-      SELECT DISTINCT f1.[fornum]
-      FROM [afapformularios].[dbo].[FORMULA1] f1
-      INNER JOIN [afapformularios].[dbo].[FORMULAR] fr
-        ON fr.[fornum] = f1.[fornum]
+      SELECT f.[fornum]
+      FROM [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
       CROSS JOIN PeriodoActual p
-      WHERE fr.[forpromoto] = @asenum
-        AND f1.[forcuando] >= p.[ciefec]
-        AND f1.[forcuando] < DATEADD(DAY, 1, p.[ciehas])
-
-      UNION
-
-      SELECT fr.[fornum]
-      FROM [afapformularios].[dbo].[FORMULAR] fr
-      WHERE fr.[forestado] = 1
-        AND fr.[forpromoto] = @asenum
+      OUTER APPLY (
+        SELECT TOP 1 f1.[forcuando]
+        FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (NOLOCK)
+        WHERE f1.[fornum] = f.[fornum]
+        ORDER BY f1.[forcuando] DESC
+      ) ult
+      WHERE f.[forpromoto] = @asenum
+        AND YEAR(f.[forentrega]) > YEAR(GETDATE()) - 2
+        AND (
+          f.[forestado] IN (1,2,3,4,5,6,8,9,10,11)
+          OR ult.[forcuando] > p.[ciefec]
+        )
     ),
     UltimaAccion AS (
       SELECT
             f1.[fornum]
           , f1.[forcuando]
-          , f1.[foraccion]
-          , f1.[fordetalle]
+          , LTRIM(RTRIM(f1.[foraccion])) AS [foraccion]
+          , LTRIM(RTRIM(f1.[fordetalle])) AS [fordetalle]
           , f1.[forrechnum]
-          , ROW_NUMBER() OVER (
-              PARTITION BY f1.[fornum]
-              ORDER BY f1.[forcuando] DESC
-            ) AS rn
-      FROM [afapformularios].[dbo].[FORMULA1] f1
+          , r.[rechnom]
+          , r.[rechdev]
+          , f1.[fordias]
+          , f1.[forpec]
+          , LTRIM(RTRIM(f1.[forpecobs])) AS [forpecobs]
+          , f1.[forvisto]
+          , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC) AS rn
+      FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (NOLOCK)
+      LEFT JOIN [afapformularios].[dbo].[RECHAZOS] r WITH (NOLOCK)
+        ON r.[rechnum] = f1.[forrechnum]
       WHERE f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
-    ),
-    DetalleEnv AS (
-      SELECT
-            f1.[fornum]
-          , f1.[fordetalle]
-          , ROW_NUMBER() OVER (
-              PARTITION BY f1.[fornum]
-              ORDER BY f1.[forcuando] DESC
-            ) AS rn
-      FROM [afapformularios].[dbo].[FORMULA1] f1
-      WHERE f1.[foraccion] = 'ENV'
-        AND NULLIF(LTRIM(RTRIM(f1.[fordetalle])), '') IS NOT NULL
-        AND f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
     )
     SELECT
-          fb.[fornum]
-        , u.[forcuando]
-        , u.[foraccion]
+          f.[fornum]
+        , CASE
+            WHEN f.[forestado] = 1 THEN f.[forentrega]
+            ELSE u.[forcuando]
+          END AS [forcuando]
+        , CASE
+            WHEN COALESCE(f.[forci], 0) > 0 THEN 'CI:' + RTRIM(CAST(f.[forci] AS char))
+            ELSE ''
+          END AS [fordetalle]
+        , COALESCE(u.[foraccion], '') AS [foraccion]
+        , COALESCE(u.[fordetalle], '') AS [foraccion_detalle]
         , u.[forrechnum]
-        , fr.[forpromoto] AS [forquien_env]
-        , NULLIF(LTRIM(RTRIM(
-            REPLACE(
-              REPLACE(
-                REPLACE(
-                  REPLACE(
-                    COALESCE(de.[fordetalle], u.[fordetalle]),
-                  ':', ''),
-                ',', ''),
-              '.', ''),
-            ';', '')
-          )), '') AS [fordetalle]
+        , LTRIM(RTRIM(COALESCE(u.[rechnom], ''))) AS [rechnom]
+        , u.[rechdev]
+        , COALESCE(u.[fordias], 0) AS [fordias]
+        , COALESCE(u.[forpec], 0) AS [forpec]
+        , COALESCE(u.[forpecobs], '') AS [forpecobs]
+        , u.[forvisto]
+        , f.[forestado]
+        , COALESCE(f.[forauto], 0) AS [forauto]
+        , COALESCE(f.[forproy], 0) AS [forproy]
+        , COALESCE(pa.[asenum], 0) AS [forproyase]
+        , f.[forpromoto] AS [forpromoto]
+        , COALESCE(f.[forase], f.[forpromoto]) AS [forquien_env]
     FROM FormulariosBase fb
+    INNER JOIN [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+      ON f.[fornum] = fb.[fornum]
     LEFT JOIN UltimaAccion u
-      ON fb.[fornum] = u.[fornum]
+      ON u.[fornum] = f.[fornum]
      AND u.rn = 1
-    LEFT JOIN [afapformularios].[dbo].[FORMULAR] fr
-      ON fb.[fornum] = fr.[fornum]
-    LEFT JOIN DetalleEnv de
-      ON fb.[fornum] = de.[fornum]
-     AND de.rn = 1
-    WHERE fr.[forpromoto] = @asenum
+    LEFT JOIN [Avisos].[dbo].[ProyAnual] pa WITH (NOLOCK)
+      ON pa.[ProyAnualInt] = f.[forproy]
+    WHERE f.[forpromoto] = @asenum
       AND (
-        (
-          u.[forcuando] IS NOT NULL
-          AND u.[forcuando] >= DATEADD(DAY, -@periodoDias, CAST(GETDATE() AS date))
-        )
-        OR (
-          u.[forcuando] IS NULL
-          AND u.[foraccion] IS NULL
-          AND COALESCE(de.[fordetalle], u.[fordetalle]) IS NULL
-        )
+        u.[forcuando] IS NULL
+        OR u.[forcuando] >= DATEADD(DAY, -@periodoDias, CAST(GETDATE() AS date))
+        OR f.[forestado] = 1
       )
-      ${statusFilter}
     ORDER BY
-      CASE
-        WHEN u.[forcuando] IS NULL
-         AND u.[foraccion] IS NULL
-         AND COALESCE(de.[fordetalle], u.[fordetalle]) IS NULL
-        THEN 0
-        ELSE 1
-      END,
+      CASE WHEN u.[forcuando] IS NULL THEN 0 ELSE 1 END,
       u.[forcuando] DESC,
-      fb.[fornum] DESC;
+      f.[fornum] DESC;
   `;
 
   const result = await pool
     .request()
-    .input("asenum", sql.VarChar(20), asesor)
+    .input("asenum", sql.Int, asesor)
     .input("periodoDias", sql.Int, dias)
     .query(query);
-  const items = (result.recordset || []).map((row) => ({
-    fornum: row.fornum != null ? String(row.fornum).trim() : "",
-    forcuando: row.forcuando || null,
-    foraccion: cleanText(row.foraccion),
-    forquien_env: cleanText(row.forquien_env),
-    fordetalle: cleanText(row.fordetalle),
-    forrechnum: row.forrechnum != null ? String(row.forrechnum).trim() : "",
-  }));
+
+  let items = (result.recordset || []).map((row) => {
+    const base = {
+      fornum: row.fornum != null ? String(row.fornum).trim() : "",
+      forcuando: row.forcuando || null,
+      foraccion: cleanText(row.foraccion),
+      foraccion_detalle: cleanText(row.foraccion_detalle),
+      forquien_env: cleanText(row.forquien_env),
+      forpromoto: cleanText(row.forpromoto),
+      fordetalle: cleanText(row.fordetalle),
+      forrechnum: row.forrechnum != null ? String(row.forrechnum).trim() : "",
+      rechnom: cleanText(row.rechnom),
+      rechdev: row.rechdev != null ? Number(row.rechdev) : null,
+      fordias: row.fordias != null ? Number(row.fordias) : 0,
+      forpec: row.forpec != null ? Number(row.forpec) : 0,
+      forpecobs: cleanText(row.forpecobs),
+      forvisto: row.forvisto || null,
+      forestado: row.forestado != null ? Number(row.forestado) : null,
+      forauto: row.forauto != null ? Number(row.forauto) : 0,
+      forproy: row.forproy != null ? String(row.forproy).trim() : "",
+      forproyase: row.forproyase != null ? String(row.forproyase).trim() : "",
+    };
+
+    const visual = buildFormularioVisual(base);
+    const distanciaTexto = Number(base.forauto || 0) === 1 ? ">100km" : "<100km";
+    const proyectoVisible = base.forproyase || base.forproy || "";
+
+    return {
+      ...base,
+      ...visual,
+      proyectoTexto: proyectoVisible ? `Proy.${proyectoVisible} ${distanciaTexto}` : "",
+      asesorTexto: base.forquien_env ? `Asesor: ${base.forquien_env}` : "",
+    };
+  });
+
+  const filtro = normalizeText(estatus);
+  if (filtro && filtro !== "TODOS") {
+    items = items.filter((item) => normalizeText(item.estatus) === filtro);
+  }
 
   return {
-    asesor,
+    asesor: String(asesor),
     periodo_dias: dias,
     estatus: cleanText(estatus) || "Todos",
     total: items.length,
@@ -213,6 +430,407 @@ async function getFormulariosByAsesor({
   };
 }
 
+async function getFormulariosPendientesByAsesor({ asenum }) {
+  const asesor = validarAsesor(asenum);
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("asenum", sql.Int, asesor)
+    .query(`
+      SELECT
+            [fornum]
+          , [forpromoto]
+          , [forestado]
+          , [forproy]
+          , [fordonde]
+      FROM [afapformularios].[dbo].[FORMULAR]
+      WHERE [forpromoto] = @asenum
+        AND [forestado] IN (1, 8, 9, 10, 11)
+      ORDER BY [fornum] DESC;
+    `);
+
+  const items = (result.recordset || []).map((row) => ({
+    fornum: row.fornum != null ? String(row.fornum).trim() : "",
+    forpromoto: row.forpromoto != null ? String(row.forpromoto).trim() : "",
+    forestado: row.forestado != null ? Number(row.forestado) : null,
+    forproy: row.forproy != null ? String(row.forproy).trim() : "",
+    fordonde: cleanText(row.fordonde),
+  }));
+
+  return {
+    asesor: String(asesor),
+    total: items.length,
+    items,
+  };
+}
+
+async function getProyectosFormulario({ asenum, fecha }) {
+  const asesor = validarAsesor(asenum);
+  const fechaProyecto = parseDateOrNull(fecha) || new Date();
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("fecha", sql.Date, fechaProyecto)
+    .input("asenum", sql.Int, asesor)
+    .query(`
+      WITH PeriodoLiquidacion AS (
+        SELECT TOP 1
+              CAST(c.[ciefec] AS date) AS [PeriodoDesde]
+            , CAST(c.[ciehas] AS date) AS [PeriodoHasta]
+        FROM [afapformularios].[dbo].[CIERRES] c WITH (NOLOCK)
+        WHERE @fecha BETWEEN CAST(c.[ciefec] AS date)
+                         AND CAST(c.[ciehas] AS date)
+        ORDER BY c.[ciefec] DESC, c.[ciehas] DESC
+      ),
+      ProyectosPeriodo AS (
+        SELECT
+              PA.[ProyAnualInt] AS [ProyectoId]
+            , PA.[asenum]
+            , LTRIM(RTRIM(PA.[ProyAnualTipo])) AS [ProyAnualTipo]
+            , LTRIM(RTRIM(PA.[ProyAnualMatriculas])) AS [ProyectoMatricula]
+            , CONCAT(
+                PA.[asenum],
+                '-',
+                LTRIM(RTRIM(SUBSTRING(PA.[ProyAnualTipo], 1, 3))),
+                '-',
+                LTRIM(RTRIM(PA.[ProyAnualMatriculas]))
+              ) AS [ProyectoNombre]
+            , 'S' AS [ProyectoEstado]
+            , CASE WHEN LTRIM(RTRIM(PA.[ProyAnualTipo])) = 'ALQUILER' THEN 1 ELSE 0 END AS [ProyAlquiler]
+            , PA.[ProyAnualHasta]
+            , PA.[ProyAnualDesde]
+            , PL.[PeriodoDesde]
+            , PL.[PeriodoHasta]
+            , ROW_NUMBER() OVER (
+                PARTITION BY
+                  PA.[asenum],
+                  LTRIM(RTRIM(PA.[ProyAnualTipo])),
+                  LTRIM(RTRIM(PA.[ProyAnualMatriculas])),
+                  CAST(PA.[ProyAnualDesde] AS date),
+                  CAST(PA.[ProyAnualHasta] AS date)
+                ORDER BY PA.[ProyAnualInt] DESC
+              ) AS rn
+        FROM [Avisos].[dbo].[ProyAnual] PA WITH (NOLOCK)
+        CROSS JOIN PeriodoLiquidacion PL
+        WHERE PA.[asenum] = @asenum
+          AND CAST(PA.[ProyAnualDesde] AS date) >= PL.[PeriodoDesde]
+          AND CAST(PA.[ProyAnualHasta] AS date) <= PL.[PeriodoHasta]
+      )
+      SELECT
+            PP.[ProyectoId]
+          , PP.[asenum]
+          , PP.[ProyectoNombre]
+          , PP.[ProyectoMatricula]
+          , PP.[ProyectoEstado]
+          , PP.[ProyAlquiler]
+          , CONVERT(varchar(10), PP.[ProyAnualHasta], 103) AS [ProyectoHasta]
+          , CONVERT(varchar(10), PP.[ProyAnualDesde], 103) AS [ProyectoDesde]
+          , CONVERT(varchar(10), PP.[PeriodoDesde], 103) AS [PeriodoDesde]
+          , CONVERT(varchar(10), PP.[PeriodoHasta], 103) AS [PeriodoHasta]
+          , 0 AS [ProyectoFichas]
+          , 0 AS [ProyectoImporte]
+          , CONVERT(varchar(500), STUFF((
+              SELECT ', ' + RTRIM(PD.[ProyAnualDepto])
+              FROM [Avisos].[dbo].[ProyAnualDeptos] PD WITH (NOLOCK)
+              WHERE PD.[ProyAnualInt] = PP.[ProyectoId]
+              FOR XML PATH('')
+            ), 1, 1, '')) AS [Deptos]
+      FROM ProyectosPeriodo PP
+      WHERE PP.rn = 1
+      ORDER BY PP.[asenum], PP.[ProyectoId] DESC;
+    `);
+
+  const items = (result.recordset || []).map((row) => ({
+    ProyectoId: row.ProyectoId != null ? String(row.ProyectoId).trim() : "",
+    asenum: row.asenum != null ? String(row.asenum).trim() : "",
+    ProyectoNombre: cleanText(row.ProyectoNombre),
+    ProyectoMatricula: cleanText(row.ProyectoMatricula),
+    ProyectoEstado: cleanText(row.ProyectoEstado),
+    ProyAlquiler: row.ProyAlquiler != null ? Number(row.ProyAlquiler) : 0,
+    ProyectoHasta: cleanText(row.ProyectoHasta),
+    ProyectoDesde: cleanText(row.ProyectoDesde),
+    PeriodoDesde: cleanText(row.PeriodoDesde),
+    PeriodoHasta: cleanText(row.PeriodoHasta),
+    ProyectoFichas: row.ProyectoFichas != null ? Number(row.ProyectoFichas) : 0,
+    ProyectoImporte: row.ProyectoImporte != null ? Number(row.ProyectoImporte) : 0,
+    Deptos: cleanText(row.Deptos),
+  }));
+
+  return {
+    fecha: dateToInput(fechaProyecto),
+    periodoDesde: items[0]?.PeriodoDesde || "",
+    periodoHasta: items[0]?.PeriodoHasta || "",
+    total: items.length,
+    items,
+  };
+}
+
+async function verificarFormulario({ asenum, formulario, asesorForm }) {
+  const asesor = validarAsesor(asenum);
+  const fornum = validarFormularioNumero(formulario);
+  const asesor2 = parseIntOrNull(asesorForm) || asesor;
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("fornum", sql.Int, fornum)
+    .input("asenum", sql.Int, asesor)
+    .input("asesor2", sql.Int, asesor2)
+    .query(`
+      SELECT CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM [afapformularios].[dbo].[FORMULAR] WITH (NOLOCK)
+          WHERE [forpromoto] IN (@asenum, @asesor2)
+            AND [forestado] IN (1,8,9,10,11)
+            AND [fornum] = @fornum
+        ) THEN 'correcto'
+        ELSE 'mal'
+      END AS resultado;
+    `);
+
+  const resultado = cleanText(result.recordset?.[0]?.resultado) || "mal";
+  return { formulario: String(fornum), resultado };
+}
+
+async function getFormularioDetalle({ asenum, fornum }) {
+  const asesor = validarAsesor(asenum);
+  const formulario = validarFormularioNumero(fornum);
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("fornum", sql.Int, formulario)
+    .input("asenum", sql.Int, asesor)
+    .query(`
+      SELECT TOP 1
+          f.[fornum]
+        , f.[forci]
+        , CONVERT(varchar(10), f.[forfec], 103) AS [forfec]
+        , f.[fortel]
+        , f.[forcel]
+        , f.[fordire]
+        , f.[forpuerta]
+        , f.[forapto]
+        , f.[forbis]
+        , f.[forciu]
+        , f.[fordepto]
+        , f.[formail]
+        , f.[forproy]
+        , f.[fordonde]
+        , f.[forfoto]
+        , f.[forcifoto]
+        , f.[for35d]
+        , f.[for35f]
+        , f.[forcifoto2]
+        , f.[forauto]
+        , f.[forx]
+        , f.[fory]
+        , f.[forase]
+        , f.[forori]
+        , CONVERT(varchar(10), f.[forfecnac], 103) AS [forfecnac]
+        , f.[forempresa]
+        , f.[forsueldo]
+        , f.[fortipdoc]
+        , f.[forcodci]
+        , f.[forcodciser]
+        , f.[forcitipo]
+      FROM [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+      WHERE f.[fornum] = @fornum
+        AND f.[forpromoto] = @asenum;
+    `);
+
+  const row = result.recordset?.[0];
+  if (!row) {
+    const error = new Error("Formulario no encontrado para el asesor autenticado");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    fornum: row.fornum != null ? String(row.fornum) : "",
+    forci: row.forci != null ? String(row.forci) : "",
+    forfec: dateToInput(row.forfec),
+    fortel: cleanText(row.fortel),
+    forcel: cleanText(row.forcel),
+    fordire: cleanText(row.fordire),
+    forpuerta: cleanText(row.forpuerta),
+    forapto: cleanText(row.forapto),
+    forbis: cleanText(row.forbis),
+    forciu: cleanText(row.forciu),
+    fordepto: cleanText(row.fordepto),
+    formail: cleanText(row.formail),
+    forproy: row.forproy != null ? String(row.forproy) : "",
+    fordonde: cleanText(row.fordonde),
+    forfoto: bufferToDataUrl(row.forfoto),
+    forcifoto: bufferToDataUrl(row.forcifoto),
+    for35d: bufferToDataUrl(row.for35d),
+    for35f: bufferToDataUrl(row.for35f),
+    forcifoto2: bufferToDataUrl(row.forcifoto2),
+    forauto: row.forauto != null ? String(row.forauto) : "",
+    forx: row.forx != null ? String(row.forx) : "",
+    fory: row.fory != null ? String(row.fory) : "",
+    forase: row.forase != null ? String(row.forase) : "",
+    forori: row.forori != null ? String(row.forori) : "",
+    forfecnac: dateToInput(row.forfecnac),
+    forempresa: cleanText(row.forempresa),
+    forsueldo: row.forsueldo != null ? String(row.forsueldo) : "",
+    fortipdoc: cleanText(row.fortipdoc),
+    forcodci: cleanText(row.forcodci),
+    forcodciser: cleanText(row.forcodciser),
+    forcitipo: cleanText(row.forcitipo),
+  };
+}
+
+async function enviarFormulario({ asenum, fornum, payload }) {
+  const asesor = validarAsesor(asenum);
+  const formulario = validarFormularioNumero(fornum);
+
+  const documentoTexto = cleanText(payload.documento);
+  const documentoNumerico = parseIntOrNull(documentoTexto);
+  const tipoDocumento = optionalText(payload.tipoDocumento || "CI", 2) || "CI";
+  const distanciaFlag = distanciaToFlag(payload.distancia);
+
+  if (!documentoTexto) {
+    const error = new Error("Debe ingresar el documento");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (documentoNumerico === null || !/^\d+$/.test(documentoTexto)) {
+    const error = new Error("El documento debe ser numérico. Para pasaporte o documento extranjero, ingrese la CI ficticia asignada, por ejemplo 100000000.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!payload.fotos?.formulario) {
+    const error = new Error("Debe tomar foto del formulario");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const verificacion = await verificarFormulario({
+    asenum: asesor,
+    formulario,
+    asesorForm: payload.asesorForm || payload.autorizacion,
+  });
+
+  if (verificacion.resultado !== "correcto") {
+    const error = new Error("Verifique el número de formulario");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pool = await getPool();
+  const transaction = new sql.Transaction(pool);
+
+  await transaction.begin();
+
+  try {
+    const request = new sql.Request(transaction);
+
+    await request
+      .input("ASE", sql.Int, asesor)
+      .input("FORNUM", sql.Int, formulario)
+      .input("CED", sql.Int, documentoNumerico)
+      .input("forfoto", sql.VarBinary(sql.MAX), base64ToBuffer(payload.fotos?.formulario))
+      .input("forcifoto", sql.VarBinary(sql.MAX), base64ToBuffer(payload.fotos?.ciFrente))
+      .input("forfec", sql.Date, parseDateOrNull(payload.fechaForm) || new Date())
+      .input("fortel", sql.VarChar(25), truncateText(payload.telefono, 25))
+      .input("forcel", sql.VarChar(25), truncateText(payload.celular, 25))
+      .input("fordire", sql.VarChar(120), truncateText(payload.calle, 120))
+      .input("forpuerta", sql.VarChar(5), truncateText(payload.puerta, 5))
+      .input("forapto", sql.VarChar(5), truncateText(payload.apto, 5))
+      .input("forbis", sql.VarChar(3), truncateText(payload.bis, 3))
+      .input("forciu", sql.VarChar(25), truncateText(payload.localidad, 25))
+      .input("fordepto", sql.VarChar(25), truncateText(payload.departamento, 25))
+      .input("formail", sql.VarChar(50), truncateText(payload.mail, 50))
+      .input("forproy", sql.Int, parseIntOrNull(payload.proyecto))
+      .input("forauto", sql.Int, distanciaFlag)
+      .input("fordonde", sql.SmallInt, distanciaFlag)
+      .input("forx", sql.Decimal(18, 12), parseDecimalOrNull(payload.x))
+      .input("fory", sql.Decimal(18, 12), parseDecimalOrNull(payload.y))
+      .input("forori", sql.Int, parseIntOrNull(payload.asesorForm || payload.autorizacion) || asesor)
+      .input("forfecnac", sql.Date, parseDateOrNull(payload.fechaNac))
+      .input("for35d", sql.VarBinary(sql.MAX), base64ToBuffer(payload.fotos?.form35Dorso))
+      .input("for35f", sql.VarBinary(sql.MAX), base64ToBuffer(payload.fotos?.form35Frente))
+      .input("forcifoto2", sql.VarBinary(sql.MAX), base64ToBuffer(payload.fotos?.ciDorso))
+      .input("forempresa", sql.VarChar(40), truncateText(payload.empresa, 40))
+      .input("forsueldo", sql.Decimal(19, 4), parseMoneyOrNull(payload.sueldo))
+      .input("fortipdoc", sql.VarChar(2), tipoDocumento)
+      .input("forcodci", sql.VarChar(10), optionalText(payload.codigoCI, 10))
+      .input("forcodciser", sql.VarChar(10), optionalText(payload.serieCodCI, 10))
+      .input("forcitipo", sql.SmallInt, parseSmallIntOrNull(payload.tipoImpresionCI) || 0)
+      .query(`
+        UPDATE [afapformularios].[dbo].[FORMULAR]
+        SET
+            [forfoto] = @forfoto
+          , [forci] = @CED
+          , [forcifoto] = @forcifoto
+          , [forfec] = @forfec
+          , [fortel] = @fortel
+          , [forcel] = @forcel
+          , [fordire] = @fordire
+          , [forpuerta] = @forpuerta
+          , [forapto] = @forapto
+          , [forbis] = @forbis
+          , [forciu] = @forciu
+          , [fordepto] = @fordepto
+          , [formail] = @formail
+          , [forproy] = @forproy
+          , [forauto] = @forauto
+          , [fordonde] = @fordonde
+          , [forx] = @forx
+          , [fory] = @fory
+          , [forase] = @ASE
+          , [forori] = @forori
+          , [forfecnac] = @forfecnac
+          , [for35d] = @for35d
+          , [for35f] = @for35f
+          , [forcifoto2] = @forcifoto2
+          , [forestado] = 2
+          , [forproc] = 0
+          , [forempresa] = @forempresa
+          , [forsueldo] = @forsueldo
+          , [fortipdoc] = @fortipdoc
+          , [forcodci] = @forcodci
+          , [forcodciser] = @forcodciser
+          , [forcitipo] = @forcitipo
+        WHERE [fornum] = @FORNUM
+          AND [forpromoto] = @ASE;
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+          THROW 51000, 'No se pudo actualizar el formulario para el asesor autenticado.', 1;
+        END;
+
+        INSERT INTO [afapformularios].[dbo].[FORMULA1]
+          ([fornum], [forcuando], [foraccion], [forquien], [fordetalle], [fordias], [forvisto], [forpecobs], [forusu], [forrechnum], [forpec])
+        VALUES
+          (@FORNUM, GETDATE(), 'ENV', @ASE, '', 0, '1753-01-01', '', '', 0, 0);
+      `);
+
+    await transaction.commit();
+    return { formulario: String(formulario), enviado: true };
+  } catch (error) {
+    try {
+      if (transaction._aborted !== true) {
+        await transaction.rollback();
+      }
+    } catch (rollbackError) {
+      console.error("[formularios] rollback fallido:", rollbackError);
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   getFormulariosByAsesor,
+  getFormulariosPendientesByAsesor,
+  getProyectosFormulario,
+  verificarFormulario,
+  getFormularioDetalle,
+  enviarFormulario,
 };

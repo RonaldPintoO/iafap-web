@@ -57,13 +57,16 @@ async function getLocalidadesByDepartamento(departamento) {
     .input("departamento", sql.VarChar(100), dep)
     .query(`
       SELECT
-          CAST([locdepciu] AS int) AS idlocalidad,
+          MIN(CAST([locdepciu] AS int)) AS idlocalidad,
           LTRIM(RTRIM([locdepdep])) AS departamento,
           LTRIM(RTRIM([locdeploc])) AS localidad
       FROM [2023_AFAP_Gestion].[dbo].[LOCDEP]
       WHERE LTRIM(RTRIM([locdepdep])) = @departamento
         AND NULLIF(LTRIM(RTRIM([locdeploc])), '') IS NOT NULL
         AND UPPER(LTRIM(RTRIM([locdeploc]))) NOT IN ('S/D', 'N/A')
+      GROUP BY
+          LTRIM(RTRIM([locdepdep])),
+          LTRIM(RTRIM([locdeploc]))
       ORDER BY localidad;
     `);
 

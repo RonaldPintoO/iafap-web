@@ -76,13 +76,13 @@ export default function FormsList({ items, onItemClick }) {
 
                   {(it.proy && it.proy !== "—") || it.km ? (
                     <div className="forms-item__line">
-                      {it.proy && it.proy !== "—" ? `Proy.${it.proy}` : ""}{" "}
+                      {it.proy && it.proy !== "—" ? it.proy : ""}{" "}
                       {it.km}
                     </div>
                   ) : null}
 
                   {it.asesor ? (
-                    <div className="forms-item__line">Asesor: {it.asesor}</div>
+                    <div className="forms-item__line">{it.asesor}</div>
                   ) : null}
                 </div>
               </div>

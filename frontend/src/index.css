@@ -4315,3 +4315,98 @@ body{
     bottom: 112px;
   }
 }
+
+
+/* =========================
+   FORMULARIOS - FOTOS
+   ========================= */
+
+.forms-foto-tab{
+  display: grid;
+  gap: 16px;
+}
+
+.forms-foto-tab__header{
+  display: grid;
+  gap: 4px;
+}
+
+.forms-foto-tab__title{
+  font-size: clamp(18px, 5vw, 26px);
+  font-weight: 800;
+  color: #333;
+}
+
+.forms-foto-tab__help{
+  font-size: clamp(13px, 3.8vw, 16px);
+  color: #777;
+  line-height: 1.35;
+}
+
+.forms-foto-tab__preview{
+  min-height: min(52vh, 420px);
+  border: 1px dashed var(--divider);
+  border-radius: 10px;
+  background: #fafafa;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.forms-foto-tab__img{
+  max-width: 100%;
+  max-height: min(52vh, 420px);
+  object-fit: contain;
+  display: block;
+}
+
+.forms-foto-tab__empty{
+  display: grid;
+  gap: 10px;
+  place-items: center;
+  color: #999;
+  font-size: clamp(15px, 4vw, 18px);
+  padding: 26px;
+  text-align: center;
+}
+
+.forms-foto-tab__empty .material-symbols-outlined{
+  font-size: clamp(42px, 12vw, 64px);
+  color: #aaa;
+}
+
+.forms-foto-tab__actions{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.forms-foto-tab__button{
+  min-height: 46px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  font-weight: 800;
+  padding: 0 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(13px, 3.8vw, 16px);
+}
+
+.forms-foto-tab__button input{
+  display: none;
+}
+
+.forms-foto-tab__button.is-danger{
+  color: #b71c1c;
+}
+
+.forms-add-action:disabled,
+.forms-add-tab:disabled,
+.forms-foto-tab__button:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -19,21 +19,6 @@ export const LEYENDA = [
   { color: "#ffffff", label: "Vacío", border: "#000000" },
 ];
 
-export const PROYECTOS_DEMO = [
-  "1332-PRO-CBD 1303",
-  "1512-PRO-SBZ 1373",
-  "1618-PRO-AAZ 6458",
-  "2005-PRO-SCF 1356",
-  "2030-PRO-AAR 4797",
-  "3005-PRO-OAE 3103",
-  "3007-PRO-SCG 4199",
-  "3064-PRO-SDD 4937",
-  "3065-PRO-SBI 6680",
-  "3075-PRO-SDA 5511",
-  "3093-PRO-SDD 4411",
-  "3117-PRO-SCL 8868",
-  "3152-PRO-ABK 2846",
-];
 
 export const DISTANCIAS = ["-100 Km", "+100 Km"];
 
@@ -59,6 +44,17 @@ export function cleanText(value) {
   return String(value).trim();
 }
 
+
+export function todayInputDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function isValidInputDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
+  const year = Number(String(value).slice(0, 4));
+  return year >= 1900;
+}
+
 export function normalizeText(value = "") {
   return cleanText(value)
     .normalize("NFD")
@@ -80,22 +76,6 @@ export function formatMoney(v = "") {
   const nums = cleanNumbers(v);
   if (!nums) return "";
   return Number(nums).toLocaleString("es-UY");
-}
-
-export function validarCedulaUruguaya(ci = "") {
-  const clean = cleanNumbers(ci);
-  if (clean.length < 7 || clean.length > 8) return false;
-
-  const padded = clean.padStart(8, "0");
-  const factors = [2, 9, 8, 7, 6, 3, 4];
-
-  let sum = 0;
-  for (let i = 0; i < 7; i += 1) {
-    sum += Number(padded[i]) * factors[i];
-  }
-
-  const expected = (10 - (sum % 10)) % 10;
-  return expected === Number(padded[7]);
 }
 
 export function formatDateDDMMYY(date) {
@@ -121,6 +101,24 @@ export function parseDDMMYYToDate(str) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+export function parseDDMMYYYYToInputDate(str) {
+  if (!str || !/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return "";
+  const [dd, mm, yyyy] = str.split("/");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function getEdadDesdeFecha(inputDate) {
+  if (!inputDate) return null;
+  const nac = new Date(`${inputDate}T00:00:00`);
+  if (Number.isNaN(nac.getTime())) return null;
+
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nac.getFullYear();
+  const mes = hoy.getMonth() - nac.getMonth();
+  if (mes < 0 || (mes === 0 && hoy.getDate() < nac.getDate())) edad -= 1;
+  return edad;
+}
+
 export function getPeriodoDias(periodo) {
   const n = parseInt(periodo, 10);
   return Number.isFinite(n) ? n : 30;
@@ -131,11 +129,11 @@ export function buildDefaultDatos({ paises = [] } = {}) {
     paises.find((p) => normalizeText(p?.nombre || p) === "URUGUAY") || null;
 
   return {
-    proyecto: PROYECTOS_DEMO[0],
+    proyecto: "",
     distancia: DISTANCIAS[0],
     asesor: "",
     asesorForm: "",
-    fechaForm: "",
+    fechaForm: todayInputDate(),
 
     formulario: "",
     tipoDocumento: "CI",
@@ -162,7 +160,178 @@ export function buildDefaultDatos({ paises = [] } = {}) {
     paisId: uruguay?.idpais ?? 1,
     departamento: "",
     localidad: "",
+
+    fotoFormulario: "",
+    fotoCiFrente: "",
+    fotoCiDorso: "",
+    foto35Frente: "",
+    foto35Dorso: "",
   };
+}
+
+function hasFormularioValue(value) {
+  const text = cleanText(value);
+  if (!text) return false;
+
+  const normalized = normalizeText(text);
+  if (normalized === "0") return false;
+  if (normalized === "0.00") return false;
+  if (normalized === "1753-01-01") return false;
+  if (normalized === "01/01/1753") return false;
+  if (normalized === "1900-01-01") return false;
+  if (normalized === "01/01/1900") return false;
+
+  return true;
+}
+
+function formularioValue(value, fallback) {
+  return hasFormularioValue(value) ? cleanText(value) : fallback;
+}
+
+export function mergeFormularioDetalleToDatos(prev, detalle = {}, extra = {}) {
+  const asesorLogueado = cleanText(extra.asesorLogueado);
+  const detalleFechaForm = cleanText(detalle.forfec);
+  const detalleFechaNac = cleanText(detalle.forfecnac);
+
+  return {
+    ...prev,
+    formulario: hasFormularioValue(detalle.fornum) ? String(detalle.fornum) : prev.formulario,
+    cedula: hasFormularioValue(detalle.forci) ? String(detalle.forci) : prev.cedula,
+    fechaForm: isValidInputDate(detalleFechaForm) ? detalleFechaForm : prev.fechaForm || todayInputDate(),
+    telefono: formularioValue(detalle.fortel, prev.telefono),
+    celular: formularioValue(detalle.forcel, prev.celular),
+    calle: formularioValue(detalle.fordire, prev.calle),
+    nro: formularioValue(detalle.forpuerta, prev.nro),
+    apto: formularioValue(detalle.forapto, prev.apto),
+    bis: formularioValue(detalle.forbis, prev.bis),
+    localidad: formularioValue(detalle.forciu, prev.localidad),
+    departamento: formularioValue(detalle.fordepto, prev.departamento),
+    mail: formularioValue(detalle.formail, prev.mail),
+    proyecto: hasFormularioValue(detalle.forproy) ? String(detalle.forproy) : prev.proyecto,
+    distancia: formularioValue(detalle.fordonde, prev.distancia),
+    asesor: asesorLogueado || prev.asesor,
+    asesorForm: asesorLogueado || prev.asesorForm,
+    fechaNac: isValidInputDate(detalleFechaNac) ? detalleFechaNac : prev.fechaNac,
+    empresa: formularioValue(detalle.forempresa, prev.empresa),
+    sueldo: hasFormularioValue(detalle.forsueldo) ? String(detalle.forsueldo) : prev.sueldo,
+    tipoDocumento: formularioValue(detalle.fortipdoc, prev.tipoDocumento),
+    codigoCI: formularioValue(detalle.forcitipo, prev.codigoCI),
+    serieCodCI: formularioValue(detalle.forcodciser, prev.serieCodCI),
+    nroCodCI: formularioValue(detalle.forcodci, prev.nroCodCI),
+    fotoFormulario: detalle.forfoto || prev.fotoFormulario,
+    fotoCiFrente: detalle.forcifoto || prev.fotoCiFrente,
+    fotoCiDorso: detalle.forcifoto2 || prev.fotoCiDorso,
+    foto35Frente: detalle.for35f || prev.foto35Frente,
+    foto35Dorso: detalle.for35d || prev.foto35Dorso,
+  };
+}
+
+export function buildFormularioPayload(datos) {
+  return {
+    formulario: cleanText(datos.formulario),
+    fechaForm: cleanText(datos.fechaForm),
+    tipoDocumento: cleanText(datos.tipoDocumento),
+    documento: cleanText(datos.cedula),
+    pais: cleanText(datos.pais),
+    paisId: datos.paisId ?? null,
+    fechaNac: cleanText(datos.fechaNac),
+    telefono: cleanText(datos.telefono),
+    celular: cleanText(datos.celular),
+    empresa: cleanText(datos.empresa),
+    sueldo: cleanText(datos.sueldo),
+    mail: cleanText(datos.mail),
+    calle: cleanText(datos.calle),
+    puerta: cleanText(datos.nro),
+    apto: cleanText(datos.apto),
+    bis: cleanText(datos.bis),
+    departamento: cleanText(datos.departamento),
+    localidad: cleanText(datos.localidad),
+    proyecto: cleanText(datos.proyecto),
+    asesorForm: cleanText(datos.asesorForm),
+    autorizacion: cleanText(datos.asesorForm),
+    forauto: normalizeText(datos.distancia).includes("+100") ? 1 : 0,
+    distancia: cleanText(datos.distancia),
+    codigoCI: cleanText(datos.nroCodCI),
+    serieCodCI: cleanText(datos.serieCodCI),
+    tipoImpresionCI: cleanText(datos.codigoCI),
+    fotos: {
+      formulario: datos.fotoFormulario || "",
+      ciFrente: datos.fotoCiFrente || "",
+      ciDorso: datos.fotoCiDorso || "",
+      form35Frente: datos.foto35Frente || "",
+      form35Dorso: datos.foto35Dorso || "",
+    },
+  };
+}
+
+export function getProyectoOptions(items = [], selectedProyecto = "") {
+  const selected = cleanText(selectedProyecto);
+  const seenValues = new Set();
+  const seenLabels = new Set();
+  const options = [];
+
+  for (const item of items || []) {
+    const value = cleanText(item?.ProyectoId || item?.proyectoId || item?.id);
+    const label = cleanText(item?.ProyectoNombre || item?.nombre || `Proyecto ${value}`);
+    const labelKey = normalizeText(label);
+
+    if (!value || seenValues.has(value) || seenLabels.has(labelKey)) continue;
+
+    seenValues.add(value);
+    seenLabels.add(labelKey);
+    options.push({
+      value,
+      label,
+      asenum: item?.asenum != null ? String(item.asenum) : "",
+      matricula: cleanText(item?.ProyectoMatricula || item?.matricula),
+      deptos: cleanText(item?.Deptos || item?.deptos),
+      raw: item,
+    });
+  }
+
+  if (selected && !seenValues.has(selected)) {
+    options.unshift({
+      value: selected,
+      label: `Proyecto ${selected}`,
+      asenum: "",
+      matricula: "",
+      deptos: "",
+      raw: null,
+    });
+  }
+
+  return options;
+}
+
+export function getFormularioPendienteOptions(items = [], selectedFormulario = "") {
+  const selected = cleanText(selectedFormulario);
+  const seen = new Set();
+  const options = [];
+
+  for (const item of items || []) {
+    const fornum = cleanText(item?.fornum || item?.id);
+    if (!fornum || seen.has(fornum)) continue;
+
+    seen.add(fornum);
+
+    options.push({
+      value: fornum,
+      label: `Formulario ${fornum}`,
+      asesor: item?.forpromoto ? String(item.forpromoto) : "",
+      raw: item,
+    });
+  }
+
+  if (selected && !seen.has(selected)) {
+    options.unshift({
+      value: selected,
+      label: `Formulario ${selected}`,
+      asesor: "",
+      raw: null,
+    });
+  }
+
+  return options;
 }
 
 export function getNombrePaisOptions(paises = []) {
@@ -181,28 +350,45 @@ export function getDepartamentoOptions(departamentos = []) {
 }
 
 export function getLocalidadOptions(localidades = []) {
-  return localidades.map((loc) => ({
-    value: loc.localidad || loc,
-    label: loc.localidad || loc,
-    idlocalidad: loc.idlocalidad ?? null,
-  }));
+  const seen = new Set();
+  const options = [];
+
+  for (const loc of localidades || []) {
+    const value = loc?.localidad || loc;
+    const label = loc?.localidad || loc;
+    const key = normalizeText(value);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    options.push({
+      value,
+      label,
+      idlocalidad: loc?.idlocalidad ?? null,
+    });
+  }
+
+  return options;
 }
 
 export function formatDateTimeParts(value) {
-  if (!value) {
-    return {
-      fecha: "Pendiente",
-      hora: "",
-    };
+  if (!value) return { fecha: "Pendiente", hora: "" };
+
+  // SQL Server DATETIME no tiene zona horaria. El driver/API puede serializarlo
+  // como ISO con "Z" y el navegador lo convierte a hora local, restando 3 horas
+  // en Uruguay. Para el listado de formularios debemos mostrar la hora tal como
+  // está grabada en SQL, igual que la APK, sin conversión de zona horaria.
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+    if (match) {
+      const [, yyyy, mm, dd, hh, mi] = match;
+      return {
+        fecha: `${Number(dd)}/${Number(mm)}/${yyyy}`,
+        hora: `${hh}:${mi}`,
+      };
+    }
   }
 
   const dt = new Date(value);
-  if (Number.isNaN(dt.getTime())) {
-    return {
-      fecha: "",
-      hora: "",
-    };
-  }
+  if (Number.isNaN(dt.getTime())) return { fecha: "", hora: "" };
 
   const fecha = dt.toLocaleDateString("es-UY");
   const hora = dt.toLocaleTimeString("es-UY", {
@@ -214,103 +400,23 @@ export function formatDateTimeParts(value) {
 }
 
 export function resolveFormularioVisual(row) {
-  const accion = normalizeText(row?.foraccion);
-  const detalleOriginal = cleanText(row?.fordetalle);
-  const numeroRechazo = cleanText(row?.forrechnum);
-  const detalle = normalizeText(detalleOriginal);
-
-  const isPendiente =
-    row?.forcuando == null &&
-    !cleanText(row?.foraccion) &&
-    !cleanText(row?.fordetalle);
-
-  if (isPendiente) {
-    return {
-      estadoTxt: "Pendiente",
-      color: "#ffffff",
-      estatus: "En Proceso",
-      borderColor: "#000000",
-    };
-  }
-
-  if (detalle.includes("SIN ACTIVIDAD")) {
-    return {
-      estadoTxt: detalleOriginal || "Sin actividad",
-      color: "#2f3fa3",
-      estatus: "Inactivos",
-    };
-  }
-
-  if (accion === "OK") {
-    return {
-      estadoTxt: "OK",
-      color: "#97d49a",
-      estatus: "Inactivos",
-    };
-  }
-
-  if (accion === "BPS") {
-    return {
-      estadoTxt: "BPS",
-      color: "#43a047",
-      estatus: "Inactivos",
-    };
-  }
-
-  if (accion === "REC" && detalle.includes("ANULAR")) {
-    return {
-      estadoTxt: "Anulado",
-      color: "#000000",
-      estatus: "Inactivos",
-    };
-  }
-
-  if (accion === "REC") {
-    if (numeroRechazo == 10) {
-      return {
-        estadoTxt: "Anulado",
-        color: "#000000",
-        estatus: "Inactivos",
-      };
-    }
-    return {
-      estadoTxt: detalleOriginal ? `REC ${detalleOriginal}` : "Rechazado",
-      color: "#d32f2f",
-      estatus: "Inactivos",
-    };
-  }
-
-  if (detalleOriginal) {
-    return {
-      estadoTxt: detalleOriginal,
-      color: "#ffa000",
-      estatus: "En Proceso",
-    };
-  }
-
-  if (accion === "ENV") {
-    return {
-      estadoTxt: "Recibido sin errores",
-      color: "#cfead1",
-      estatus: "En Proceso",
-    };
-  }
-
   return {
-    estadoTxt: accion || "En proceso",
-    color: "#ffa000",
-    estatus: "En Proceso",
+    estadoTxt: cleanText(row?.estadoTxt || row?.estadoTexto || row?.foraccion || "Pendiente"),
+    color: cleanText(row?.color || row?.estadoColor || "#ffffff"),
+    estatus: cleanText(row?.estatus || "En Proceso"),
+    borderColor: cleanText(row?.borderColor || row?.estadoBorderColor || ""),
   };
 }
 
 export function mapFormularioItem(row) {
   const { fecha, hora } = formatDateTimeParts(row?.forcuando);
   const visual = resolveFormularioVisual(row);
+
   return {
     id: row?.fornum ? String(row.fornum) : "",
-    ci: "—",
-    fo: "FO",
-    proy: "—",
+    ci: "",
+    fo: cleanText(row?.fordetalle),
+    proy: cleanText(row?.proyectoTexto || ""),
     km: "",
     fecha,
     hora,
@@ -318,7 +424,7 @@ export function mapFormularioItem(row) {
     color: visual.color,
     estatus: visual.estatus,
     borderColor: visual.borderColor || "",
-    asesor: row?.forquien_env ? String(row.forquien_env) : "",
+    asesor: cleanText(row?.asesorTexto || ""),
     raw: row,
   };
 }
