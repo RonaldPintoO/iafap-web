@@ -40,6 +40,22 @@ import {
 } from "../components/formularios/formularios.api";
 import { validateFormularioPayload } from "../components/formularios/forms.validators";
 
+function scrollAppToTop() {
+  window.requestAnimationFrame(() => {
+    const main = document.querySelector(".main");
+    if (main && typeof main.scrollTo === "function") {
+      main.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+
+    const detail = document.querySelector(".afi-detail");
+    if (detail && typeof detail.scrollTo === "function") {
+      detail.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  });
+}
+
 export default function Afiliaciones() {
   const [tab, setTab] = useState("personas");
   const [showFilters, setShowFilters] = useState(false);
@@ -168,6 +184,12 @@ export default function Afiliaciones() {
   const [userLoc, setUserLoc] = useState(null);
   const [locStatus, setLocStatus] = useState("idle");
   const [locMsg, setLocMsg] = useState("");
+
+  useEffect(() => {
+    if (personaSeleccionada?.cedula) {
+      scrollAppToTop();
+    }
+  }, [personaSeleccionada?.cedula]);
 
   const setPersonaField = (key, value) => {
     setPersonaForm((prev) => ({ ...prev, [key]: value }));

@@ -2,13 +2,13 @@ export default function FormsList({ items, onItemClick }) {
   const estadoOrden = [
     "Pendiente",
     "ENV",
-    "OA",
-    "REP",
+    "REC",
     "OK",
     "BPS",
     "BSA",
+    "OA",
     "NOK",
-    "REC",
+    "REP",
   ];
 
   const sortedItems = [...items].sort((a, b) => {
@@ -19,8 +19,7 @@ export default function FormsList({ items, onItemClick }) {
     const ordenB = estadoB === -1 ? 999 : estadoB;
 
     if (ordenA !== ordenB) return ordenA - ordenB;
-
-    return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+    return Number(a.id) - Number(b.id);
   });
 
   return (
@@ -29,19 +28,20 @@ export default function FormsList({ items, onItemClick }) {
         <div className="forms-empty">(Sin resultados)</div>
       ) : (
         sortedItems.map((it) => {
-          const isPendiente = it.estadoTxt === "Pendiente";
+          const puedeAbrir = it.estadoTxt === "Pendiente" || it.permiteEditar;
 
           return (
             <div
-              className={`forms-item ${isPendiente ? "is-clickable" : ""}`}
+              className={`forms-item ${puedeAbrir ? "is-clickable" : ""}`}
               key={it.id}
               onClick={() => {
-                if (isPendiente) onItemClick?.(it);
+                if (puedeAbrir) onItemClick?.(it);
               }}
-              role="button"
-              tabIndex={isPendiente ? 0 : -1}
+              role={puedeAbrir ? "button" : undefined}
+              tabIndex={puedeAbrir ? 0 : -1}
               onKeyDown={(e) => {
-                if (isPendiente && (e.key === "Enter" || e.key === " ")) {
+                if (puedeAbrir && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
                   onItemClick?.(it);
                 }
               }}
@@ -59,18 +59,16 @@ export default function FormsList({ items, onItemClick }) {
                   <div className="forms-item__id">{it.id}</div>
 
                   <div className="forms-item__main">
-                    {it.detalle ? (
-                      <div className="forms-item__line">{it.detalle}</div>
+                    {it.detalleFormulario ? (
+                      <div className="forms-item__line">{it.detalleFormulario}</div>
                     ) : null}
 
-                    {(it.proy && it.proy !== "—") || it.km ? (
-                      <div className="forms-item__line">
-                        {it.proy && it.proy !== "—" ? `Proy.${it.proy}` : ""} {it.km}
-                      </div>
+                    {it.proyectoTexto ? (
+                      <div className="forms-item__line">{it.proyectoTexto}</div>
                     ) : null}
 
-                    {it.asesor ? (
-                      <div className="forms-item__line">Asesor: {it.asesor}</div>
+                    {it.asesorTexto ? (
+                      <div className="forms-item__line">{it.asesorTexto}</div>
                     ) : null}
                   </div>
                 </div>
@@ -81,14 +79,29 @@ export default function FormsList({ items, onItemClick }) {
                     <div>{it.hora}</div>
                   </div>
 
-                  <div className="forms-item__estado">
-                    <div>{it.estadoTxt}</div>
+                  <div className="forms-item__estado-wrap">
+                    <div className="forms-item__estado">{it.estadoTxt}</div>
                     {it.estadoDetalle ? (
                       <div className="forms-item__estado-detalle">
-                        {it.estadoDetalle.split("\n").map((linea, idx) => (
-                          <div key={`${it.id}-detalle-${idx}`}>{linea}</div>
-                        ))}
+                        {String(it.estadoDetalle)
+                          .split("\n")
+                          .filter(Boolean)
+                          .map((line) => (
+                            <div key={line}>{line}</div>
+                          ))}
                       </div>
+                    ) : null}
+                    {it.permiteEditar ? (
+                      <button
+                        type="button"
+                        className="forms-item__edit-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onItemClick?.(it);
+                        }}
+                      >
+                        Editar y reenviar
+                      </button>
                     ) : null}
                   </div>
                 </div>

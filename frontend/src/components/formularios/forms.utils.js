@@ -372,20 +372,19 @@ export function getLocalidadOptions(localidades = []) {
 export function formatDateTimeParts(value) {
   if (!value) return { fecha: "Pendiente", hora: "" };
 
-  const text = String(value).trim();
-
-  const sqlMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?/);
+  const raw = String(value).trim();
+  const sqlMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?/);
   if (sqlMatch) {
     const [, yyyy, mm, dd, hh = "", min = ""] = sqlMatch;
-    const fecha = `${Number(dd)}/${Number(mm)}/${yyyy}`;
+    const fecha = `${dd}/${mm}/${yyyy}`;
     const hora = hh && min ? `${hh}:${min}` : "";
     return { fecha, hora };
   }
 
-  const ddmmyyyy = text.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
-  if (ddmmyyyy) {
-    const [, dd, mm, yyyy, hh = "", min = ""] = ddmmyyyy;
-    const fecha = `${Number(dd)}/${Number(mm)}/${yyyy}`;
+  const uyMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (uyMatch) {
+    const [, dd, mm, yyyy, hh = "", min = ""] = uyMatch;
+    const fecha = `${dd}/${mm}/${yyyy}`;
     const hora = hh && min ? `${hh}:${min}` : "";
     return { fecha, hora };
   }
@@ -393,36 +392,32 @@ export function formatDateTimeParts(value) {
   const dt = new Date(value);
   if (Number.isNaN(dt.getTime())) return { fecha: "", hora: "" };
 
-  const fecha = dt.toLocaleDateString("es-UY");
-  const hora = dt.toLocaleTimeString("es-UY", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  return { fecha, hora };
+  return {
+    fecha: dt.toLocaleDateString("es-UY"),
+    hora: dt.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" }),
+  };
 }
 
 export function resolveFormularioVisual(row) {
   return {
-    estadoTxt: cleanText(row?.estadoTexto || row?.foraccion || "Pendiente"),
+    estadoTxt: cleanText(row?.estadoTexto) || cleanText(row?.foraccion) || "Pendiente",
     estadoDetalle: cleanText(row?.estadoDetalle),
-    color: cleanText(row?.estadoColor) || "#ffa000",
-    estatus: cleanText(row?.estadoFiltro) || "Todos",
+    color: cleanText(row?.estadoColor) || "#ffffff",
+    estatus: cleanText(row?.estadoFiltro) || "En Proceso",
     borderColor: cleanText(row?.estadoBorde),
+    permiteEditar: Boolean(row?.permiteEditar),
   };
 }
 
 export function mapFormularioItem(row) {
   const { fecha, hora } = formatDateTimeParts(row?.forcuando);
   const visual = resolveFormularioVisual(row);
-  const distancia = Number(row?.forauto || 0) === 1 ? ">100km" : "<100km";
-  const proyectoAsesor = cleanText(row?.forproyase) || cleanText(row?.forproy);
 
   return {
     id: row?.fornum ? String(row.fornum) : "",
-    detalle: cleanText(row?.fordetalle),
-    proy: proyectoAsesor || "—",
-    km: proyectoAsesor ? distancia : "",
+    detalleFormulario: cleanText(row?.fordetalle),
+    proyectoTexto: cleanText(row?.proyectoTexto),
+    asesorTexto: cleanText(row?.asesorTexto),
     fecha,
     hora,
     estadoTxt: visual.estadoTxt,
@@ -430,7 +425,9 @@ export function mapFormularioItem(row) {
     color: visual.color,
     estatus: visual.estatus,
     borderColor: visual.borderColor || "",
+    permiteEditar: visual.permiteEditar,
     asesor: row?.forquien_env ? String(row.forquien_env) : "",
     raw: row,
   };
 }
+

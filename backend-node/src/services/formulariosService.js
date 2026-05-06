@@ -165,6 +165,113 @@ function buildStatusFilter(estatus) {
   return "";
 }
 
+
+function sameNormalizedText(a, b) {
+  return normalizeText(a) === normalizeText(b);
+}
+
+function apkFormularioColor(forestado) {
+  const estado = Number(forestado);
+  switch (estado) {
+    case 2:
+      return { estadoColor: "#e8eaf6", estadoBorde: "", estadoFiltro: "En Proceso" };
+    case 3:
+      return { estadoColor: "#c8e6c9", estadoBorde: "", estadoFiltro: "Inactivos" };
+    case 4:
+    case 5:
+      return { estadoColor: "#d32f2f", estadoBorde: "", estadoFiltro: "Inactivos" };
+    case 6:
+      return { estadoColor: "#303f9f", estadoBorde: "", estadoFiltro: "Inactivos" };
+    case 7:
+      return { estadoColor: "#43a047", estadoBorde: "", estadoFiltro: "Inactivos" };
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+      return { estadoColor: "#ffa000", estadoBorde: "", estadoFiltro: "En Proceso" };
+    case 12:
+      return { estadoColor: "#000000", estadoBorde: "", estadoFiltro: "Inactivos" };
+    default:
+      return { estadoColor: "#ffffff", estadoBorde: "#000000", estadoFiltro: "En Proceso" };
+  }
+}
+
+function buildEstadoDetalle(row) {
+  const forrechnum = Number(row.forrechnum || 0);
+  const rechnom = cleanText(row.rechnom);
+  const fordetalle = cleanText(row.fordetalle_accion);
+  const detalles = [];
+
+  if (forrechnum > 0 && rechnom) {
+    detalles.push(rechnom);
+  }
+
+  if (fordetalle && !detalles.some((item) => sameNormalizedText(item, fordetalle))) {
+    detalles.push(fordetalle);
+  }
+
+  if (Number(row.forpec || 0) === 1 && cleanText(row.forpecobs)) {
+    const pec = `PIERDE PEC ${cleanText(row.forpecobs)}`;
+    if (!detalles.some((item) => sameNormalizedText(item, pec))) detalles.push(pec);
+  }
+
+  return detalles.join("\n");
+}
+
+function buildFormularioListItem(row) {
+  const accion = cleanText(row.foraccion);
+  const visual = apkFormularioColor(row.forestado);
+  const pendiente = Number(row.forestado) === 1 && !accion;
+  const forauto = Number(row.forauto || 0);
+  const proyectoVisible = cleanText(row.forproyase) || cleanText(row.forproy);
+  const estadoTexto = pendiente ? "Pendiente" : accion;
+  const estadoDetalle = buildEstadoDetalle(row);
+
+  return {
+    fornum: row.fornum != null ? String(row.fornum).trim() : "",
+    forcuando: row.forcuando || null,
+    foraccion: accion,
+    forquien_env: cleanText(row.forquien_env),
+    forpromoto: cleanText(row.forpromoto),
+    fordetalle: cleanText(row.fordetalle),
+    forrechnum: row.forrechnum != null ? String(row.forrechnum).trim() : "",
+    rechnom: cleanText(row.rechnom),
+    rechdev: row.rechdev != null ? Number(row.rechdev) : null,
+    fordias: row.fordias != null ? Number(row.fordias) : 0,
+    forpec: row.forpec != null ? Number(row.forpec) : 0,
+    forpecobs: cleanText(row.forpecobs),
+    forvisto: row.forvisto || null,
+    forestado: row.forestado != null ? Number(row.forestado) : null,
+    forauto,
+    forproy: row.forproy != null ? String(row.forproy).trim() : "",
+    forproyase: row.forproyase != null ? String(row.forproyase).trim() : "",
+    estadoTexto,
+    estadoDetalle,
+    estadoColor: visual.estadoColor,
+    estadoBorde: visual.estadoBorde,
+    estadoFiltro: pendiente ? "En Proceso" : visual.estadoFiltro,
+    permiteEditar: Number(row.forestado) === 4 || Number(row.forestado) === 5,
+    proyectoTexto: proyectoVisible ? `Proy.${proyectoVisible} ${forauto === 1 ? ">100km" : "<100km"}` : "",
+    asesorTexto: cleanText(row.forquien_env) ? `Asesor: ${cleanText(row.forquien_env)}` : "",
+  };
+}
+
+function firstUsefulText(...values) {
+  for (const value of values) {
+    const text = cleanText(value);
+    if (text && normalizeText(text) !== "0") return text;
+  }
+  return "";
+}
+
+function firstUsefulDate(...values) {
+  for (const value of values) {
+    const input = dateToInput(value);
+    if (input) return input;
+  }
+  return "";
+}
+
 function validarAsesor(asenum) {
   const asesor = parseIntOrNull(asenum);
   if (!asesor) {
@@ -183,81 +290,6 @@ function validarFormularioNumero(value) {
     throw error;
   }
   return fornum;
-}
-
-
-function sameMeaning(a, b) {
-  const aa = normalizeText(a);
-  const bb = normalizeText(b);
-  return Boolean(aa && bb && aa === bb);
-}
-
-function buildEstadoDetalleFromUltima(row) {
-  const detalles = [];
-  const forrechnum = Number(row.forrechnum || 0);
-  const rechnom = cleanText(row.rechnom);
-  const fordetalleAccion = cleanText(row.foracciondetalle);
-
-  if (forrechnum > 0 && rechnom) {
-    detalles.push(rechnom);
-  }
-
-  if (
-    fordetalleAccion &&
-    !detalles.some((detalle) => sameMeaning(detalle, fordetalleAccion))
-  ) {
-    detalles.push(fordetalleAccion);
-  }
-
-  return detalles.join("\n");
-}
-
-function buildFormularioVisualDesdeApk(row) {
-  const accion = cleanText(row.foraccion).toUpperCase();
-  const detalle = buildEstadoDetalleFromUltima(row);
-  const forestado = row.forestado != null ? Number(row.forestado) : null;
-
-  if (!accion) {
-    return {
-      estadoTexto: "Pendiente",
-      estadoCodigo: "PENDIENTE",
-      estadoDetalle: "",
-      estadoColor: "#ffffff",
-      estadoBorde: "#000000",
-      estadoFiltro: "En Proceso",
-    };
-  }
-
-  const colores = {
-    ENV: "#ffa000",
-    REC: "#000000",
-    OK: "#97d49a",
-    BPS: "#43a047",
-    BSA: "#43a047",
-    NOK: "#d32f2f",
-    OA: "#ffa000",
-    REP: "#ffa000",
-  };
-
-  const filtros = {
-    ENV: "En Proceso",
-    OA: "En Proceso",
-    REP: "En Proceso",
-    REC: "Inactivos",
-    OK: "Activos",
-    BPS: "Activos",
-    BSA: "Activos",
-    NOK: "Inactivos",
-  };
-
-  return {
-    estadoTexto: accion,
-    estadoCodigo: accion,
-    estadoDetalle: detalle,
-    estadoColor: colores[accion] || "#ffa000",
-    estadoBorde: "",
-    estadoFiltro: filtros[accion] || (forestado === 1 ? "En Proceso" : "Todos"),
-  };
 }
 
 async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Todos" }) {
@@ -295,9 +327,9 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
             f1.[fornum]
           , f1.[forcuando]
           , LTRIM(RTRIM(f1.[foraccion])) AS [foraccion]
-          , LTRIM(RTRIM(f1.[fordetalle])) AS [foracciondetalle]
+          , LTRIM(RTRIM(f1.[fordetalle])) AS [fordetalle]
           , f1.[forrechnum]
-          , LTRIM(RTRIM(COALESCE(r.[rechnom], ''))) AS [rechnom]
+          , r.[rechnom]
           , r.[rechdev]
           , f1.[fordias]
           , f1.[forpec]
@@ -320,7 +352,7 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
             ELSE ''
           END AS [fordetalle]
         , COALESCE(u.[foraccion], '') AS [foraccion]
-        , COALESCE(u.[foracciondetalle], '') AS [foracciondetalle]
+        , COALESCE(u.[fordetalle], '') AS [fordetalle_accion]
         , u.[forrechnum]
         , LTRIM(RTRIM(COALESCE(u.[rechnom], ''))) AS [rechnom]
         , u.[rechdev]
@@ -360,40 +392,18 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
     .input("periodoDias", sql.Int, dias)
     .query(query);
 
-  let items = (result.recordset || []).map((row) => {
-    const visual = buildFormularioVisualDesdeApk(row);
-
-    return {
-      fornum: row.fornum != null ? String(row.fornum).trim() : "",
-      forcuando: row.forcuando || null,
-      foraccion: cleanText(row.foraccion),
-      foracciondetalle: cleanText(row.foracciondetalle),
-      forquien_env: cleanText(row.forquien_env),
-      forpromoto: cleanText(row.forpromoto),
-      fordetalle: cleanText(row.fordetalle),
-      forrechnum: row.forrechnum != null ? String(row.forrechnum).trim() : "",
-      rechnom: cleanText(row.rechnom),
-      rechdev: row.rechdev != null ? Number(row.rechdev) : null,
-      fordias: row.fordias != null ? Number(row.fordias) : 0,
-      forpec: row.forpec != null ? Number(row.forpec) : 0,
-      forpecobs: cleanText(row.forpecobs),
-      forvisto: row.forvisto || null,
-      forestado: row.forestado != null ? Number(row.forestado) : null,
-      forauto: row.forauto != null ? Number(row.forauto) : 0,
-      forproy: row.forproy != null ? String(row.forproy).trim() : "",
-      forproyase: row.forproyase != null ? String(row.forproyase).trim() : "",
-      estadoCodigo: visual.estadoCodigo,
-      estadoTexto: visual.estadoTexto,
-      estadoDetalle: visual.estadoDetalle,
-      estadoColor: visual.estadoColor,
-      estadoBorde: visual.estadoBorde,
-      estadoFiltro: visual.estadoFiltro,
-    };
-  });
+  let items = (result.recordset || []).map(buildFormularioListItem);
 
   const filtro = normalizeText(estatus);
   if (filtro && filtro !== "TODOS") {
-    items = items.filter((item) => normalizeText(item.estadoFiltro) === filtro);
+    items = items.filter((item) => {
+      const estadoFiltro = normalizeText(item.estadoFiltro);
+      const accion = normalizeText(item.estadoTexto);
+      if (filtro === "ACTIVOS") return accion === "OK" || accion === "BPS";
+      if (filtro === "INACTIVOS") return estadoFiltro === "INACTIVOS";
+      if (filtro === "EN PROCESO") return estadoFiltro === "EN PROCESO";
+      return true;
+    });
   }
 
   return {
@@ -559,7 +569,7 @@ async function verificarFormulario({ asenum, formulario, asesorForm }) {
           SELECT 1
           FROM [afapformularios].[dbo].[FORMULAR] WITH (NOLOCK)
           WHERE [forpromoto] IN (@asenum, @asesor2)
-            AND [forestado] IN (1,8,9,10,11)
+            AND [forestado] IN (1,4,5,8,9,10,11)
             AND [fornum] = @fornum
         ) THEN 'correcto'
         ELSE 'mal'
@@ -612,7 +622,21 @@ async function getFormularioDetalle({ asenum, fornum }) {
         , f.[forcodci]
         , f.[forcodciser]
         , f.[forcitipo]
+        , p.[perfecnac] AS [persona_fecnac]
+        , p.[pertel] AS [persona_tel]
+        , p.[percel] AS [persona_cel]
+        , p.[permail] AS [persona_mail]
+        , p.[percalle] AS [persona_calle]
+        , p.[perpuerta] AS [persona_puerta]
+        , p.[perapto] AS [persona_apto]
+        , p.[perbis] AS [persona_bis]
+        , ld.[locdeploc] AS [persona_localidad]
+        , ld.[locdepdep] AS [persona_departamento]
       FROM [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+      LEFT JOIN [2023_AFAP_Gestion].[dbo].[PERSONA] p WITH (NOLOCK)
+        ON p.[perci] = f.[forci]
+      LEFT JOIN [2023_AFAP_Gestion].[dbo].[LOCDEP] ld WITH (NOLOCK)
+        ON ld.[locdepciu] = p.[perlocnum]
       WHERE f.[fornum] = @fornum
         AND f.[forpromoto] = @asenum;
     `);
@@ -628,17 +652,17 @@ async function getFormularioDetalle({ asenum, fornum }) {
     fornum: row.fornum != null ? String(row.fornum) : "",
     forci: row.forci != null ? String(row.forci) : "",
     forfec: dateToInput(row.forfec),
-    fortel: cleanText(row.fortel),
-    forcel: cleanText(row.forcel),
-    fordire: cleanText(row.fordire),
-    forpuerta: cleanText(row.forpuerta),
-    forapto: cleanText(row.forapto),
-    forbis: cleanText(row.forbis),
-    forciu: cleanText(row.forciu),
-    fordepto: cleanText(row.fordepto),
-    formail: cleanText(row.formail),
+    fortel: firstUsefulText(row.fortel, row.persona_tel),
+    forcel: firstUsefulText(row.forcel, row.persona_cel),
+    fordire: firstUsefulText(row.fordire, row.persona_calle),
+    forpuerta: firstUsefulText(row.forpuerta, row.persona_puerta),
+    forapto: firstUsefulText(row.forapto, row.persona_apto),
+    forbis: firstUsefulText(row.forbis, row.persona_bis),
+    forciu: firstUsefulText(row.forciu, row.persona_localidad),
+    fordepto: firstUsefulText(row.fordepto, row.persona_departamento),
+    formail: firstUsefulText(row.formail, row.persona_mail),
     forproy: row.forproy != null ? String(row.forproy) : "",
-    fordonde: cleanText(row.fordonde),
+    fordonde: Number(row.forauto || 0) === 1 ? "+100 Km" : "-100 Km",
     forfoto: bufferToDataUrl(row.forfoto),
     forcifoto: bufferToDataUrl(row.forcifoto),
     for35d: bufferToDataUrl(row.for35d),
@@ -649,7 +673,7 @@ async function getFormularioDetalle({ asenum, fornum }) {
     fory: row.fory != null ? String(row.fory) : "",
     forase: row.forase != null ? String(row.forase) : "",
     forori: row.forori != null ? String(row.forori) : "",
-    forfecnac: dateToInput(row.forfecnac),
+    forfecnac: firstUsefulDate(row.forfecnac, row.persona_fecnac),
     forempresa: cleanText(row.forempresa),
     forsueldo: row.forsueldo != null ? String(row.forsueldo) : "",
     fortipdoc: cleanText(row.fortipdoc),

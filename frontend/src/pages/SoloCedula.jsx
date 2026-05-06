@@ -27,6 +27,23 @@ import {
 } from "../components/formularios/formularios.api";
 import { validateFormularioPayload } from "../components/formularios/forms.validators";
 
+
+function scrollAppToTop() {
+  window.requestAnimationFrame(() => {
+    const main = document.querySelector(".main");
+    if (main && typeof main.scrollTo === "function") {
+      main.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+
+    const detail = document.querySelector(".afi-detail");
+    if (detail && typeof detail.scrollTo === "function") {
+      detail.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  });
+}
+
 function onlyDigitsInput(value) {
   return value.replace(/\D/g, "");
 }
@@ -107,6 +124,12 @@ export default function SoloCedula() {
     const session = getAuthSession();
     return session?.user?.asenum ? String(session.user.asenum) : "";
   };
+
+  useEffect(() => {
+    if (persona?.cedula) {
+      scrollAppToTop();
+    }
+  }, [persona?.cedula]);
 
   function onChange(e) {
     const clean = onlyDigitsInput(e.target.value).slice(0, 9);
@@ -361,6 +384,33 @@ export default function SoloCedula() {
     const direccion = personaActual?.direccion || {};
     const telefonos = personaActual?.telefonos || {};
 
+    const telefonoPrecarga =
+      telefonos.telefono ||
+      personaActual?.telefono ||
+      personaActual?.pertel ||
+      "";
+    const celularPrecarga =
+      telefonos.celular ||
+      personaActual?.celular ||
+      personaActual?.percel ||
+      "";
+    const mailPrecarga =
+      personaActual?.mail ||
+      personaActual?.email ||
+      personaActual?.permail ||
+      "";
+    const callePrecarga =
+      direccion.calle ||
+      personaActual?.calle ||
+      personaActual?.percalle ||
+      "";
+    const nroPrecarga =
+      direccion.numero ||
+      personaActual?.nroPuerta ||
+      personaActual?.nro ||
+      personaActual?.perpuerta ||
+      "";
+
     setFormularioDatos((prev) => ({
       ...prev,
       formulario: "",
@@ -369,16 +419,16 @@ export default function SoloCedula() {
       fechaForm: hoy,
 
       cedula: personaActual?.cedula ? String(personaActual.cedula) : "",
-      telefono: telefonos.telefono ? String(telefonos.telefono) : "",
-      celular: telefonos.celular ? String(telefonos.celular) : "",
-      mail: personaActual?.mail || "",
+      telefono: telefonoPrecarga ? String(telefonoPrecarga) : "",
+      celular: celularPrecarga ? String(celularPrecarga) : "",
+      mail: mailPrecarga || "",
       fechaNac:
         personaActual?.fechaNac?.slice?.(0, 10) ||
         fechaDDMMYYYYToInput(personaActual?.fechaNacimiento),
       departamento: personaActual?.departamento || "",
       localidad: personaActual?.ciudad || personaActual?.localidad || "",
-      calle: direccion.calle || personaActual?.calle || "",
-      nro: direccion.numero || personaActual?.nroPuerta || personaActual?.nro || "",
+      calle: callePrecarga,
+      nro: nroPrecarga ? String(nroPrecarga) : "",
     }));
 
     setFormularioTab("datos");
