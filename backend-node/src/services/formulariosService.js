@@ -429,6 +429,140 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
   };
 }
 
+
+async function getNotificacionesFormularios({ asenum }) {
+  const asesor = validarAsesor(asenum);
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("asenum", sql.Int, asesor)
+    .query(`
+      WITH FormulariosBase AS (
+        SELECT f.[fornum]
+        FROM [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+        WHERE f.[forpromoto] = @asenum
+          AND YEAR(f.[forentrega]) > YEAR(GETDATE()) - 2
+      ),
+      UltimaAccion AS (
+        SELECT
+              f1.[fornum]
+            , f1.[forcuando]
+            , LTRIM(RTRIM(f1.[foraccion])) AS [foraccion]
+            , LTRIM(RTRIM(f1.[fordetalle])) AS [fordetalle]
+            , f1.[forrechnum]
+            , r.[rechnom]
+            , r.[rechdev]
+            , f1.[fordias]
+            , f1.[forpec]
+            , LTRIM(RTRIM(f1.[forpecobs])) AS [forpecobs]
+            , f1.[forvisto]
+            , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC) AS rn
+        FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (NOLOCK)
+        LEFT JOIN [afapformularios].[dbo].[RECHAZOS] r WITH (NOLOCK)
+          ON r.[rechnum] = f1.[forrechnum]
+        WHERE f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
+      ),
+      UltimoEnvio AS (
+        SELECT
+              f1.[fornum]
+            , NULLIF(f1.[forquien], 0) AS [forquien_env]
+            , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC) AS rn
+        FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (NOLOCK)
+        WHERE f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
+          AND LTRIM(RTRIM(f1.[foraccion])) = 'ENV'
+          AND NULLIF(f1.[forquien], 0) IS NOT NULL
+      )
+      SELECT
+            f.[fornum]
+          , u.[forcuando]
+          , CASE
+              WHEN COALESCE(f.[forci], 0) > 0 THEN 'CI:' + RTRIM(CAST(f.[forci] AS char))
+              ELSE ''
+            END AS [fordetalle]
+          , COALESCE(u.[foraccion], '') AS [foraccion]
+          , COALESCE(u.[fordetalle], '') AS [fordetalle_accion]
+          , u.[forrechnum]
+          , LTRIM(RTRIM(COALESCE(u.[rechnom], ''))) AS [rechnom]
+          , u.[rechdev]
+          , COALESCE(u.[fordias], 0) AS [fordias]
+          , COALESCE(u.[forpec], 0) AS [forpec]
+          , COALESCE(u.[forpecobs], '') AS [forpecobs]
+          , u.[forvisto]
+          , f.[forestado]
+          , COALESCE(f.[forauto], 0) AS [forauto]
+          , COALESCE(f.[forproy], 0) AS [forproy]
+          , COALESCE(pa.[asenum], 0) AS [forproyase]
+          , f.[forpromoto] AS [forpromoto]
+          , COALESCE(ue.[forquien_env], NULLIF(f.[forase], 0), f.[forpromoto]) AS [forquien_env]
+      FROM [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+      INNER JOIN UltimaAccion u
+        ON u.[fornum] = f.[fornum]
+       AND u.rn = 1
+      LEFT JOIN UltimoEnvio ue
+        ON ue.[fornum] = f.[fornum]
+       AND ue.rn = 1
+      LEFT JOIN [Avisos].[dbo].[ProyAnual] pa WITH (NOLOCK)
+        ON pa.[ProyAnualInt] = f.[forproy]
+      WHERE f.[forpromoto] = @asenum
+        AND UPPER(LTRIM(RTRIM(COALESCE(u.[foraccion], '')))) <> 'ENV'
+        AND (
+             u.[forvisto] IS NULL
+          OR YEAR(u.[forvisto]) < 1950
+          OR DATEDIFF(SECOND, u.[forcuando], u.[forvisto]) BETWEEN 0 AND 5
+        )
+      ORDER BY u.[forcuando] DESC, f.[fornum] DESC;
+    `);
+
+  const items = (result.recordset || []).map((row) => ({
+    ...buildFormularioListItem(row),
+    notificacionId: `${cleanText(row.fornum)}-${cleanText(row.foraccion)}-${row.forcuando ? new Date(row.forcuando).getTime() : ""}`,
+    leida: false,
+  }));
+
+  return { asesor: String(asesor), total: items.length, items };
+}
+
+async function marcarNotificacionFormularioLeida({ asenum, fornum }) {
+  const asesor = validarAsesor(asenum);
+  const formulario = validarFormularioNumero(fornum);
+  const pool = await getPool();
+
+  const result = await pool
+    .request()
+    .input("asenum", sql.Int, asesor)
+    .input("fornum", sql.Int, formulario)
+    .query(`
+      ;WITH UltimaAccion AS (
+        SELECT TOP 1 f1.[fornum], f1.[forcuando], f1.[foraccion]
+        FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (UPDLOCK, ROWLOCK)
+        INNER JOIN [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+          ON f.[fornum] = f1.[fornum]
+        WHERE f1.[fornum] = @fornum
+          AND f.[forpromoto] = @asenum
+        ORDER BY f1.[forcuando] DESC
+      )
+      UPDATE f1
+      SET [forvisto] = GETDATE()
+      FROM [afapformularios].[dbo].[FORMULA1] f1
+      INNER JOIN UltimaAccion u
+        ON u.[fornum] = f1.[fornum]
+       AND u.[forcuando] = f1.[forcuando]
+      WHERE UPPER(LTRIM(RTRIM(COALESCE(u.[foraccion], '')))) <> 'ENV';
+
+      SELECT @@ROWCOUNT AS [actualizados];
+    `);
+
+  const actualizados = Number(result.recordset?.[0]?.actualizados || 0);
+  if (actualizados === 0) {
+    const error = new Error("No se encontró una notificación pendiente para marcar como leída.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return { formulario: String(formulario), leida: true };
+}
+
 async function getFormulariosPendientesByAsesor({ asenum }) {
   const asesor = validarAsesor(asenum);
   const pool = await getPool();
@@ -922,6 +1056,8 @@ async function anularFormulario({ asenum, fornum, payload }) {
 module.exports = {
   getFormulariosByAsesor,
   getFormulariosPendientesByAsesor,
+  getNotificacionesFormularios,
+  marcarNotificacionFormularioLeida,
   getProyectosFormulario,
   verificarFormulario,
   getFormularioDetalle,

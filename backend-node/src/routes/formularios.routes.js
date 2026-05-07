@@ -7,6 +7,8 @@ const router = express.Router();
 router.get("/", formulariosController.getFormularios);
 router.get("/pendientes", formulariosController.getFormulariosPendientes);
 router.get("/proyectos", formulariosController.getProyectosFormulario);
+router.get("/notificaciones", formulariosController.getNotificacionesFormularios);
+router.post("/notificaciones/:fornum/leido", formulariosController.marcarNotificacionFormularioLeida);
 router.post("/verificar", formulariosController.verificarFormulario);
 
 router.get("/catalogos", formulariosCatalogosController.getCatalogosResumen);

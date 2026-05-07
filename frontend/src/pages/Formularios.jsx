@@ -17,6 +17,8 @@ import {
 import {
   anularFormulario,
   enviarFormulario,
+  fetchNotificacionesFormularios,
+  marcarNotificacionFormularioLeida,
   fetchFormularioDetalle,
   fetchFormularios,
   fetchFormulariosPendientes,
@@ -35,6 +37,7 @@ import FormsList from "../components/formularios/FormsList";
 import FormsInfoModal from "../components/formularios/FormsInfoModal";
 import FormularioCargaModal from "../components/formularios/FormularioCargaModal";
 import AnularFormularioModal from "../components/formularios/AnularFormularioModal";
+import FormulariosNotificacionesModal from "../components/formularios/FormulariosNotificacionesModal";
 
 export default function Formularios() {
   const [periodo, setPeriodo] = useState("30 días");
@@ -64,6 +67,12 @@ export default function Formularios() {
   const [motivoAnular, setMotivoAnular] = useState("");
   const [fotoAnular, setFotoAnular] = useState("");
 
+  const [showNotificaciones, setShowNotificaciones] = useState(false);
+  const [notificacionesRaw, setNotificacionesRaw] = useState([]);
+  const [notificacionesLoading, setNotificacionesLoading] = useState(false);
+  const [notificacionesError, setNotificacionesError] = useState("");
+  const [notificacionSavingId, setNotificacionSavingId] = useState("");
+
   const paisOptions = useMemo(() => getNombrePaisOptions(paises), [paises]);
   const departamentoOptions = useMemo(
     () => getDepartamentoOptions(departamentos),
@@ -75,6 +84,8 @@ export default function Formularios() {
   );
 
   const items = useMemo(() => itemsRaw.map(mapFormularioItem), [itemsRaw]);
+  const totalNotificaciones = notificacionesRaw.length;
+
   const formularioOptions = useMemo(
     () => getFormularioPendienteOptions(formulariosPendientes, datos.formulario),
     [formulariosPendientes, datos.formulario],
@@ -121,6 +132,12 @@ export default function Formularios() {
     return data.items || [];
   };
 
+  const reloadNotificaciones = async () => {
+    const data = await fetchNotificacionesFormularios();
+    setNotificacionesRaw(data.items || []);
+    return data.items || [];
+  };
+
   const reloadProyectos = async (fecha = datos.fechaForm || todayInputDate()) => {
     const data = await fetchProyectosFormulario(fecha);
     const items = data.items || [];
@@ -142,6 +159,7 @@ export default function Formularios() {
         setShowInfo(false);
         setShowAdd(false);
         setShowAnular(false);
+        setShowNotificaciones(false);
       }
     };
 
@@ -240,6 +258,29 @@ export default function Formularios() {
     }
 
     loadPendientes();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadNotificaciones() {
+      try {
+        setNotificacionesError("");
+        const data = await fetchNotificacionesFormularios();
+        if (!ignore) setNotificacionesRaw(data.items || []);
+      } catch (err) {
+        if (!ignore) {
+          console.warn("[Formularios] No se pudieron cargar notificaciones:", err);
+          setNotificacionesRaw([]);
+          setNotificacionesError(err.message || "No se pudieron cargar las notificaciones.");
+        }
+      }
+    }
+
+    loadNotificaciones();
     return () => {
       ignore = true;
     };
@@ -407,10 +448,39 @@ export default function Formularios() {
       closeAnular();
       await reloadFormularios();
       await reloadFormulariosPendientes();
+      await reloadNotificaciones();
     } catch (err) {
       window.alert(err.message || "Error al anular el formulario.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenNotificaciones = async () => {
+    setShowNotificaciones(true);
+    try {
+      setNotificacionesLoading(true);
+      setNotificacionesError("");
+      await reloadNotificaciones();
+    } catch (err) {
+      setNotificacionesError(err.message || "No se pudieron cargar las notificaciones.");
+    } finally {
+      setNotificacionesLoading(false);
+    }
+  };
+
+  const handleMarcarNotificacionLeida = async (item) => {
+    if (!item?.id) return;
+
+    try {
+      setNotificacionSavingId(item.id);
+      await marcarNotificacionFormularioLeida(item.id);
+      await reloadNotificaciones();
+      await reloadFormularios();
+    } catch (err) {
+      window.alert(err.message || "No se pudo marcar la notificación como leída.");
+    } finally {
+      setNotificacionSavingId("");
     }
   };
 
@@ -477,6 +547,16 @@ export default function Formularios() {
 
       <button
         type="button"
+        className="forms-noti-btn"
+        aria-label="Notificaciones de formularios"
+        onClick={handleOpenNotificaciones}
+      >
+        <span className="material-symbols-outlined">notifications</span>
+        {totalNotificaciones > 0 ? <span className="forms-noti-badge">{totalNotificaciones}</span> : null}
+      </button>
+
+      <button
+        type="button"
         className="forms-info-btn"
         aria-label="Información"
         onClick={() => setShowInfo(true)}
@@ -505,6 +585,15 @@ export default function Formularios() {
 
       <FormsInfoModal showInfo={showInfo} setShowInfo={setShowInfo} />
 
+      <FormulariosNotificacionesModal
+        show={showNotificaciones}
+        items={notificacionesRaw}
+        loading={notificacionesLoading}
+        error={notificacionesError}
+        onClose={() => setShowNotificaciones(false)}
+        onMarcarLeida={handleMarcarNotificacionLeida}
+        savingId={notificacionSavingId}
+      />
 
       <AnularFormularioModal
         show={showAnular}

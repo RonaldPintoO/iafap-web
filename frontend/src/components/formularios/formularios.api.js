@@ -89,3 +89,24 @@ export async function anularFormulario(fornum, payload) {
 
   return parseJson(response, "No se pudo anular el formulario.");
 }
+
+
+export async function fetchNotificacionesFormularios() {
+  const response = await apiFetch("/formularios/notificaciones");
+  const data = await parseJson(response, "No se pudieron obtener las notificaciones de formularios.");
+
+  return {
+    asesor: data.asesor || "",
+    total: Number(data.total || 0),
+    items: Array.isArray(data.items) ? data.items : [],
+  };
+}
+
+export async function marcarNotificacionFormularioLeida(fornum) {
+  const response = await apiFetch(`/formularios/notificaciones/${encodeURIComponent(fornum)}/leido`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  return parseJson(response, "No se pudo marcar la notificación como leída.");
+}

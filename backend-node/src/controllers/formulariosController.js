@@ -71,6 +71,29 @@ async function getProyectosFormulario(req, res) {
   }
 }
 
+
+async function getNotificacionesFormularios(req, res) {
+  try {
+    const asenum = req.auth?.user?.asenum;
+    const data = await formulariosService.getNotificacionesFormularios({ asenum });
+    return res.json({ ok: true, asesor: data.asesor, total: data.total, items: data.items });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({ ok: false, detail: error.message || "Error obteniendo notificaciones de formularios" });
+  }
+}
+
+async function marcarNotificacionFormularioLeida(req, res) {
+  try {
+    const asenum = req.auth?.user?.asenum;
+    const data = await formulariosService.marcarNotificacionFormularioLeida({ asenum, fornum: req.params.fornum });
+    return res.json({ ok: true, ...data });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({ ok: false, detail: error.message || "Error marcando notificación como leída" });
+  }
+}
+
 async function verificarFormulario(req, res) {
   try {
     const asenum = req.auth?.user?.asenum;
@@ -150,6 +173,8 @@ module.exports = {
   getFormularios,
   getFormulariosPendientes,
   getProyectosFormulario,
+  getNotificacionesFormularios,
+  marcarNotificacionFormularioLeida,
   verificarFormulario,
   getFormularioDetalle,
   enviarFormulario,
