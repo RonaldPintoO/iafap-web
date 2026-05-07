@@ -16,5 +16,6 @@ router.get("/catalogos/localidades", formulariosCatalogosController.getLocalidad
 
 router.get("/:fornum", formulariosController.getFormularioDetalle);
 router.put("/:fornum", formulariosController.enviarFormulario);
+router.post("/:fornum/anular", formulariosController.anularFormulario);
 
 module.exports = router;

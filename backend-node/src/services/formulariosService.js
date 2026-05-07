@@ -251,6 +251,7 @@ function buildFormularioListItem(row) {
     estadoBorde: visual.estadoBorde,
     estadoFiltro: pendiente ? "En Proceso" : visual.estadoFiltro,
     permiteEditar: Number(row.forestado) === 4 || Number(row.forestado) === 5,
+    permiteAnular: [1, 4, 5, 8, 9, 10, 11].includes(Number(row.forestado)),
     proyectoTexto: proyectoVisible ? `Proy.${proyectoVisible} ${forauto === 1 ? ">100km" : "<100km"}` : "",
     asesorTexto: cleanText(row.forquien_env) ? `Asesor: ${cleanText(row.forquien_env)}` : "",
   };
@@ -340,6 +341,16 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
       LEFT JOIN [afapformularios].[dbo].[RECHAZOS] r WITH (NOLOCK)
         ON r.[rechnum] = f1.[forrechnum]
       WHERE f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
+    ),
+    UltimoEnvio AS (
+      SELECT
+            f1.[fornum]
+          , NULLIF(f1.[forquien], 0) AS [forquien_env]
+          , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC) AS rn
+      FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (NOLOCK)
+      WHERE f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
+        AND LTRIM(RTRIM(f1.[foraccion])) = 'ENV'
+        AND NULLIF(f1.[forquien], 0) IS NOT NULL
     )
     SELECT
           f.[fornum]
@@ -365,13 +376,16 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
         , COALESCE(f.[forproy], 0) AS [forproy]
         , COALESCE(pa.[asenum], 0) AS [forproyase]
         , f.[forpromoto] AS [forpromoto]
-        , COALESCE(f.[forase], f.[forpromoto]) AS [forquien_env]
+        , COALESCE(ue.[forquien_env], NULLIF(f.[forase], 0), f.[forpromoto]) AS [forquien_env]
     FROM FormulariosBase fb
     INNER JOIN [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
       ON f.[fornum] = fb.[fornum]
     LEFT JOIN UltimaAccion u
       ON u.[fornum] = f.[fornum]
      AND u.rn = 1
+    LEFT JOIN UltimoEnvio ue
+      ON ue.[fornum] = f.[fornum]
+     AND ue.rn = 1
     LEFT JOIN [Avisos].[dbo].[ProyAnual] pa WITH (NOLOCK)
       ON pa.[ProyAnualInt] = f.[forproy]
     WHERE f.[forpromoto] = @asenum
@@ -809,6 +823,19 @@ async function enviarFormulario({ asenum, fornum, payload }) {
           ([fornum], [forcuando], [foraccion], [forquien], [fordetalle], [fordias], [forvisto], [forpecobs], [forusu], [forrechnum], [forpec])
         VALUES
           (@FORNUM, GETDATE(), 'ENV', @ASE, '', 0, '1753-01-01', '', '', 0, 0);
+
+        IF NOT EXISTS (
+          SELECT 1
+          FROM [2023_AFAP_Gestion].[dbo].[ACCIONES] WITH (NOLOCK)
+          WHERE [perci] = @CED
+            AND [resnum] = 1
+        )
+        BEGIN
+          INSERT INTO [2023_AFAP_Gestion].[dbo].[ACCIONES]
+            ([acccuando], [acctipo], [resnum], [accobs], [acccontacto], [accmedio], [accvaluacion], [perci], [asenum], [accobs2], [acctelnvo], [accdirnvo], [accext], [accadjunto])
+          VALUES
+            (SYSDATETIME(), 4, 1, '', CONVERT(datetime, '17530101', 112), 0, 0, @CED, @ASE, '', NULL, NULL, NULL, NULL);
+        END;
       `);
 
     await transaction.commit();
@@ -825,6 +852,73 @@ async function enviarFormulario({ asenum, fornum, payload }) {
   }
 }
 
+
+async function anularFormulario({ asenum, fornum, payload }) {
+  const asesor = validarAsesor(asenum);
+  const formulario = validarFormularioNumero(fornum);
+  const detalle = truncateText(payload?.detalle, 250);
+  const foto = base64ToBuffer(payload?.foto);
+
+  if (!detalle) {
+    const error = new Error("Debe ingresar el motivo de anulación");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!foto) {
+    const error = new Error("Debe cargar una foto o comprobante para la anulación");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pool = await getPool();
+  const transaction = new sql.Transaction(pool);
+
+  await transaction.begin();
+
+  try {
+    const request = new sql.Request(transaction);
+
+    await request
+      .input("ASE", sql.Int, asesor)
+      .input("FORNUM", sql.Int, formulario)
+      .input("DETALLE", sql.VarChar(250), `ANULAR: ${detalle}`)
+      .input("forfoto", sql.VarBinary(sql.MAX), foto)
+      .query(`
+        UPDATE [afapformularios].[dbo].[FORMULAR]
+        SET
+            [forestado] = 2
+          , [forfoto] = @forfoto
+          , [forproc] = 0
+        WHERE [fornum] = @FORNUM
+          AND [forpromoto] = @ASE
+          AND [forestado] IN (1,4,5,8,9,10,11);
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+          THROW 51001, 'No se pudo anular el formulario para el asesor autenticado o el estado actual no permite anulación.', 1;
+        END;
+
+        INSERT INTO [afapformularios].[dbo].[FORMULA1]
+          ([fornum], [forcuando], [foraccion], [forquien], [fordetalle], [fordias], [forvisto], [forpecobs], [forusu], [forrechnum], [forpec])
+        VALUES
+          (@FORNUM, GETDATE(), 'ENV', @ASE, @DETALLE, 0, '1753-01-01', '', '', 0, 0);
+      `);
+
+    await transaction.commit();
+    return { formulario: String(formulario), anulado: true };
+  } catch (error) {
+    try {
+      if (transaction._aborted !== true) {
+        await transaction.rollback();
+      }
+    } catch (rollbackError) {
+      console.error("[formularios] rollback anulación fallido:", rollbackError);
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   getFormulariosByAsesor,
   getFormulariosPendientesByAsesor,
@@ -832,4 +926,5 @@ module.exports = {
   verificarFormulario,
   getFormularioDetalle,
   enviarFormulario,
+  anularFormulario,
 };

@@ -4440,3 +4440,144 @@ body{
 .forms-item__edit-btn:hover{
   filter: brightness(0.96);
 }
+
+/* =========================
+   FORMULARIOS - MODAL DE ANULACIÓN
+   ========================= */
+
+.forms-cancel-modal{
+  max-width: 680px;
+}
+
+.forms-cancel-modal__header{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, .10);
+}
+
+.forms-cancel-modal__eyebrow{
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #b91c1c;
+}
+
+.forms-cancel-modal__title{
+  margin: 4px 0 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.forms-cancel-modal__close{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .06);
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.forms-cancel-modal__close:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.forms-cancel-modal__body{
+  display: grid;
+  gap: 10px;
+}
+
+.forms-cancel-modal__label{
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.forms-cancel-modal__textarea{
+  min-height: 110px;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(15, 23, 42, .16);
+  border-radius: 16px;
+  padding: 12px 14px;
+  font: inherit;
+  outline: none;
+  background: #fff;
+}
+
+.forms-cancel-modal__textarea:focus{
+  border-color: rgba(37, 99, 235, .55);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .13);
+}
+
+.forms-cancel-modal__counter{
+  justify-self: end;
+  font-size: .8rem;
+  color: #64748b;
+}
+
+.forms-add-action.is-danger,
+.forms-item__edit-btn.is-danger{
+  background: #b91c1c;
+  color: #fff;
+  border-color: #b91c1c;
+}
+
+.forms-item__edit-btn.is-danger:hover{
+  background: #991b1b;
+}
+
+/* Ajuste visual: modal de anulación compacto para que los botones de foto sean visibles sin scroll inicial */
+.forms-cancel-modal .forms-foto-tab{
+  gap: 12px;
+}
+
+.forms-cancel-modal .forms-foto-tab__preview{
+  min-height: min(30vh, 260px);
+}
+
+.forms-cancel-modal .forms-foto-tab__img{
+  max-height: min(30vh, 260px);
+}
+
+.forms-cancel-modal .forms-foto-tab__empty{
+  padding: 18px;
+}
+
+.forms-cancel-modal .forms-foto-tab__empty .material-symbols-outlined{
+  font-size: clamp(34px, 9vw, 48px);
+}
+
+@media (max-width: 520px){
+  .forms-cancel-modal{
+    height: min(800px, 90vh);
+  }
+
+  .forms-cancel-modal__header{
+    padding: 16px 18px 10px;
+  }
+
+  .forms-cancel-modal__body{
+    gap: 8px;
+  }
+
+  .forms-cancel-modal__textarea{
+    min-height: 92px;
+  }
+
+  .forms-cancel-modal .forms-foto-tab__preview{
+    min-height: min(27vh, 230px);
+  }
+
+  .forms-cancel-modal .forms-foto-tab__img{
+    max-height: min(27vh, 230px);
+  }
+}

@@ -406,6 +406,7 @@ export function resolveFormularioVisual(row) {
     estatus: cleanText(row?.estadoFiltro) || "En Proceso",
     borderColor: cleanText(row?.estadoBorde),
     permiteEditar: Boolean(row?.permiteEditar),
+    permiteAnular: Boolean(row?.permiteAnular),
   };
 }
 
@@ -426,6 +427,7 @@ export function mapFormularioItem(row) {
     estatus: visual.estatus,
     borderColor: visual.borderColor || "",
     permiteEditar: visual.permiteEditar,
+    permiteAnular: visual.permiteAnular,
     asesor: row?.forquien_env ? String(row.forquien_env) : "",
     raw: row,
   };

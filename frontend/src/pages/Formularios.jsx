@@ -15,6 +15,7 @@ import {
 } from "../components/formularios/forms.utils";
 
 import {
+  anularFormulario,
   enviarFormulario,
   fetchFormularioDetalle,
   fetchFormularios,
@@ -33,6 +34,7 @@ import FormsToolbar from "../components/formularios/FormsToolbar";
 import FormsList from "../components/formularios/FormsList";
 import FormsInfoModal from "../components/formularios/FormsInfoModal";
 import FormularioCargaModal from "../components/formularios/FormularioCargaModal";
+import AnularFormularioModal from "../components/formularios/AnularFormularioModal";
 
 export default function Formularios() {
   const [periodo, setPeriodo] = useState("30 días");
@@ -57,6 +59,10 @@ export default function Formularios() {
 
   const [datos, setDatos] = useState(() => buildDefaultDatos());
   const [saving, setSaving] = useState(false);
+  const [showAnular, setShowAnular] = useState(false);
+  const [formularioAnular, setFormularioAnular] = useState(null);
+  const [motivoAnular, setMotivoAnular] = useState("");
+  const [fotoAnular, setFotoAnular] = useState("");
 
   const paisOptions = useMemo(() => getNombrePaisOptions(paises), [paises]);
   const departamentoOptions = useMemo(
@@ -135,6 +141,7 @@ export default function Formularios() {
         setOpenDropdownId(null);
         setShowInfo(false);
         setShowAdd(false);
+        setShowAnular(false);
       }
     };
 
@@ -357,6 +364,56 @@ export default function Formularios() {
     });
   };
 
+  const handleOpenAnular = (item) => {
+    setFormularioAnular(item);
+    setMotivoAnular("");
+    setFotoAnular("");
+    setShowAnular(true);
+  };
+
+  const closeAnular = () => {
+    if (saving) return;
+    setShowAnular(false);
+    setFormularioAnular(null);
+    setMotivoAnular("");
+    setFotoAnular("");
+  };
+
+  const handleAnularSubmit = async () => {
+    const fornum = formularioAnular?.id;
+    if (!fornum) return;
+
+    if (!motivoAnular.trim()) {
+      window.alert("Debe ingresar el motivo de anulación.");
+      return;
+    }
+
+    if (!fotoAnular) {
+      window.alert("Debe cargar una foto o comprobante para la anulación.");
+      return;
+    }
+
+    const ok = window.confirm(`Se enviará la solicitud de anulación del formulario ${fornum}. ¿Desea continuar?`);
+    if (!ok) return;
+
+    try {
+      setSaving(true);
+      await anularFormulario(fornum, {
+        detalle: motivoAnular.trim(),
+        foto: fotoAnular,
+      });
+
+      window.alert("Solicitud de anulación enviada con éxito.");
+      closeAnular();
+      await reloadFormularios();
+      await reloadFormulariosPendientes();
+    } catch (err) {
+      window.alert(err.message || "Error al anular el formulario.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async () => {
     const validation = validateFormularioPayload(datos);
 
@@ -415,7 +472,7 @@ export default function Formularios() {
       ) : error ? (
         <div className="forms-empty">{error}</div>
       ) : (
-        <FormsList items={items} onItemClick={handleOpenFormulario} />
+        <FormsList items={items} onItemClick={handleOpenFormulario} onAnularClick={handleOpenAnular} />
       )}
 
       <button
@@ -447,6 +504,19 @@ export default function Formularios() {
       </button>
 
       <FormsInfoModal showInfo={showInfo} setShowInfo={setShowInfo} />
+
+
+      <AnularFormularioModal
+        show={showAnular}
+        formulario={formularioAnular}
+        motivo={motivoAnular}
+        setMotivo={setMotivoAnular}
+        foto={fotoAnular}
+        setFoto={setFotoAnular}
+        onClose={closeAnular}
+        onSubmit={handleAnularSubmit}
+        saving={saving}
+      />
 
       <FormularioCargaModal
         show={showAdd}

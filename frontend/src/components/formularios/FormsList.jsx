@@ -1,4 +1,4 @@
-export default function FormsList({ items, onItemClick }) {
+export default function FormsList({ items, onItemClick, onAnularClick }) {
   const estadoOrden = [
     "Pendiente",
     "ENV",
@@ -101,6 +101,19 @@ export default function FormsList({ items, onItemClick }) {
                         }}
                       >
                         Editar y reenviar
+                      </button>
+                    ) : null}
+
+                    {it.permiteAnular ? (
+                      <button
+                        type="button"
+                        className="forms-item__edit-btn is-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAnularClick?.(it);
+                        }}
+                      >
+                        Anular
                       </button>
                     ) : null}
                   </div>

@@ -78,3 +78,14 @@ export async function enviarFormulario(fornum, payload) {
 
   return parseJson(response, "No se pudo enviar el formulario.");
 }
+
+
+export async function anularFormulario(fornum, payload) {
+  const response = await apiFetch(`/formularios/${encodeURIComponent(fornum)}/anular`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  return parseJson(response, "No se pudo anular el formulario.");
+}

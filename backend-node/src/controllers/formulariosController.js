@@ -127,6 +127,25 @@ async function enviarFormulario(req, res) {
   }
 }
 
+async function anularFormulario(req, res) {
+  try {
+    const asenum = req.auth?.user?.asenum;
+    const data = await formulariosService.anularFormulario({
+      asenum,
+      fornum: req.params.fornum,
+      payload: req.body || {},
+    });
+
+    return res.json({ ok: true, ...data });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error anulando formulario",
+    });
+  }
+}
+
 module.exports = {
   getFormularios,
   getFormulariosPendientes,
@@ -134,4 +153,5 @@ module.exports = {
   verificarFormulario,
   getFormularioDetalle,
   enviarFormulario,
+  anularFormulario,
 };
