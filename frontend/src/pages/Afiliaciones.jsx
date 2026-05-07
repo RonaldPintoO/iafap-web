@@ -86,6 +86,13 @@ export default function Afiliaciones() {
   const [agendadosValues, setAgendadosValues] = useState(() =>
     buildDefaultAgendados(),
   );
+  const [agendadosItems, setAgendadosItems] = useState([]);
+  const [agendadosLoading, setAgendadosLoading] = useState(false);
+  const [agendadosRefreshing, setAgendadosRefreshing] = useState(false);
+  const [agendadosError, setAgendadosError] = useState("");
+  const [agendadosReloadToken, setAgendadosReloadToken] = useState(0);
+  const [agendadosLocalidades, setAgendadosLocalidades] = useState([]);
+  const [agendadosLocalidadesLoading, setAgendadosLocalidadesLoading] = useState(false);
 
   const [personasItems, setPersonasItems] = useState([]);
   const [personasLoading, setPersonasLoading] = useState(false);
@@ -163,6 +170,16 @@ export default function Afiliaciones() {
   const formLocalidadOptions = useMemo(
     () => getLocalidadOptions(formLocalidades),
     [formLocalidades],
+  );
+
+  const agendadosDepartamentoOptions = useMemo(
+    () => ["Todos", ...formDepartamentos],
+    [formDepartamentos],
+  );
+
+  const agendadosLocalidadOptions = useMemo(
+    () => ["Todos", ...getLocalidadOptions(agendadosLocalidades).map((opt) => opt.value)],
+    [agendadosLocalidades],
   );
 
   const formFormularioOptions = useMemo(
@@ -361,6 +378,7 @@ export default function Afiliaciones() {
       setShowAccionModal(false);
       setAccionEditando(null);
       setPersonasReloadToken((prev) => prev + 1);
+      setAgendadosReloadToken((prev) => prev + 1);
     } catch (err) {
       setAccionSaveError(
         err.message ||
@@ -397,6 +415,35 @@ export default function Afiliaciones() {
     setOpenDropdownId(null);
     setAgendadosValues(buildDefaultAgendados());
     setShowFilters(false);
+    setAgendadosReloadToken((prev) => prev + 1);
+  };
+
+  const buildPersonaDesdeAgendado = (item) => ({
+    ...item,
+    cedula: item?.documento,
+    fechaNac: item?.fechaNacimiento,
+    ciudad: item?.localidad,
+    nroPuerta: item?.nroPuerta,
+    paisExtranjero: item?.paisExtranjero,
+    tieneDocumentoExtranjero: item?.esExtranjero,
+  });
+
+  const handleOpenPersonaDesdeAgendado = (item) => {
+    setTab("personas");
+    handleOpenPersonaDetalle(buildPersonaDesdeAgendado(item));
+  };
+
+  const handleRegistrarGestionAgendado = async (item) => {
+    setTab("personas");
+    handleOpenPersonaDetalle(buildPersonaDesdeAgendado(item));
+    setDetalleTab("acciones");
+    setAccionEditando(null);
+    setAccionSaveError("");
+    setShowAccionModal(true);
+
+    if (!accionesCatalogos.tipos.length || !accionesCatalogos.resultados.length) {
+      await cargarAccionesCatalogos();
+    }
   };
 
   const handleAcceptPersonasFilters = () => {
@@ -878,6 +925,56 @@ export default function Afiliaciones() {
   }, [formularioDatos.departamento, showFormularioModal]);
 
   useEffect(() => {
+    let cancelled = false;
+    const departamento = agendadosValues.dptoAg;
+
+    if (!departamento || departamento === "Todos") {
+      setAgendadosLocalidades([]);
+      if (agendadosValues.loc !== "Todos") {
+        setAgendadosValues((prev) => ({ ...prev, loc: "Todos" }));
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    async function loadLocalidadesAgendados() {
+      try {
+        setAgendadosLocalidadesLoading(true);
+        const items = await fetchLocalidadesByDepartamento(departamento);
+        if (cancelled) return;
+
+        setAgendadosLocalidades(items);
+
+        setAgendadosValues((prev) => {
+          const actualExiste = items.some(
+            (loc) => (loc?.localidad || loc) === prev.loc,
+          );
+
+          return {
+            ...prev,
+            loc: actualExiste ? prev.loc : "Todos",
+          };
+        });
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("[Afiliaciones] No se pudieron cargar localidades de agendados:", err);
+          setAgendadosLocalidades([]);
+          setAgendadosValues((prev) => ({ ...prev, loc: "Todos" }));
+        }
+      } finally {
+        if (!cancelled) setAgendadosLocalidadesLoading(false);
+      }
+    }
+
+    loadLocalidadesAgendados();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agendadosValues.dptoAg]);
+
+  useEffect(() => {
     setLocMsg("");
     if (locStatus !== "idle") setLocStatus("idle");
   }, [tab, locStatus]);
@@ -1139,6 +1236,80 @@ export default function Afiliaciones() {
   }, [topLocValue, personasAppliedValues]);
 
   useEffect(() => {
+    if (tab !== "agendados") return;
+
+    let cancelled = false;
+
+    const fetchAgendados = async () => {
+      try {
+        const isFirstLoad = agendadosItems.length === 0;
+        if (isFirstLoad) setAgendadosLoading(true);
+        else setAgendadosRefreshing(true);
+        setAgendadosError("");
+
+        const asesorLogueado = getAsesorLogueado();
+        const saved = getConfiguracionGuardada();
+        const asesorCodigo = asesorLogueado || (saved?.asesorCodigo
+          ? String(saved.asesorCodigo).trim()
+          : "");
+
+        if (!asesorCodigo) {
+          if (!cancelled) {
+            setAgendadosItems([]);
+            setAgendadosError("No hay un asesor seleccionado en Configuración.");
+          }
+          return;
+        }
+
+        const params = new URLSearchParams();
+        params.set("asesor", asesorCodigo);
+
+        if (agendadosValues.estado && agendadosValues.estado !== "Pendientes") {
+          params.set("estado", agendadosValues.estado);
+        }
+
+        if (agendadosValues.fecha && agendadosValues.fecha !== "Todos") {
+          params.set("fecha", agendadosValues.fecha);
+        }
+        if (agendadosValues.dptoAg && agendadosValues.dptoAg !== "Todos") {
+          params.set("departamento", agendadosValues.dptoAg);
+        }
+        if (agendadosValues.loc && agendadosValues.loc !== "Todos") {
+          params.set("localidad", agendadosValues.loc);
+        }
+
+        const res = await apiFetch(`/personas/agendados?${params.toString()}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.detail || "No se pudieron cargar los agendados");
+        }
+
+        if (!cancelled) {
+          setAgendadosItems(Array.isArray(data.items) ? data.items : []);
+          setAgendadosError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setAgendadosItems([]);
+          setAgendadosError(err.message || "Error cargando agendados");
+        }
+      } finally {
+        if (!cancelled) {
+          setAgendadosLoading(false);
+          setAgendadosRefreshing(false);
+        }
+      }
+    };
+
+    fetchAgendados();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, agendadosValues, agendadosReloadToken, agendadosItems.length]);
+
+  useEffect(() => {
     if (!personaSeleccionada?.cedula) return;
     if (detalleTab !== "acciones") return;
 
@@ -1377,6 +1548,12 @@ export default function Afiliaciones() {
         <AgendadosPanel
           handleResetAgendados={handleResetAgendados}
           setShowFilters={setShowFilters}
+          agendadosItems={agendadosItems}
+          agendadosLoading={agendadosLoading}
+          agendadosRefreshing={agendadosRefreshing}
+          agendadosError={agendadosError}
+          onOpenPersona={handleOpenPersonaDesdeAgendado}
+          onRegistrarGestion={handleRegistrarGestionAgendado}
         />
       )}
 
@@ -1391,6 +1568,9 @@ export default function Afiliaciones() {
         openDropdownId={openDropdownId}
         setOpenDropdownId={setOpenDropdownId}
         personasFilterCatalogs={personasFilterCatalogs}
+        agendadosDepartamentoOptions={agendadosDepartamentoOptions}
+        agendadosLocalidadOptions={agendadosLocalidadOptions}
+        agendadosLocalidadesLoading={agendadosLocalidadesLoading}
         onAcceptPersonas={handleAcceptPersonasFilters}
         personasFiltrosError={personasFiltrosError}
       />

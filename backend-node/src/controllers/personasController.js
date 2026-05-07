@@ -106,6 +106,35 @@ async function getFiltros(req, res) {
   }
 }
 
+async function getAgendados(req, res) {
+  try {
+    const asesor = req.auth?.user?.asenum || req.query.asesor || "";
+    const { estado = "Pendientes", fecha = "Todos", departamento = "Todos", localidad = "Todos" } = req.query;
+
+    const data = await personasService.getAgendados({
+      asesor,
+      estado,
+      fecha,
+      departamento,
+      localidad,
+    });
+
+    return res.json({
+      ok: true,
+      asesor: data.asesor,
+      total: data.total,
+      items: data.items,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
+      ok: false,
+      detail: error.message || "Error obteniendo agendados",
+    });
+  }
+}
+
 async function getAccionesCatalogos(req, res) {
   try {
     const data = await personasService.getAccionesCatalogos();
@@ -357,6 +386,7 @@ async function getVinculosPersona(req, res) {
 
 module.exports = {
   getPersonas,
+  getAgendados,
   getAccionesCatalogos,
   getAccionesPersona,
   crearAccionPersona,

@@ -9,6 +9,8 @@ const EMPTY_FORM = {
   accobs: "",
   accdirnvo: "",
   acctelnvo: "",
+  acccontactoFecha: "",
+  acccontactoHora: "",
 };
 
 function normalizeText(value) {
@@ -51,6 +53,24 @@ function formatNow() {
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 }
 
+function splitAgendaValue(value) {
+  const text = String(value || "").trim().replace(" ", "T");
+  if (!text) return { fecha: "", hora: "" };
+
+  const [fecha = "", horaRaw = ""] = text.split("T");
+  return {
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : "",
+    hora: /^\d{2}:\d{2}/.test(horaRaw) ? horaRaw.slice(0, 5) : "",
+  };
+}
+
+function joinAgendaValue(fecha, hora) {
+  const f = String(fecha || "").trim();
+  const h = String(hora || "").trim();
+  if (!f || !h) return "";
+  return `${f}T${h}`;
+}
+
 function accionToForm(accion, tipos) {
   if (!accion) {
     return {
@@ -58,6 +78,8 @@ function accionToForm(accion, tipos) {
       acctipo: tipos[0]?.ta_num || "",
     };
   }
+
+  const agenda = splitAgendaValue(accion.acccontacto);
 
   return {
     acctipo: accion.acctipo || tipos[0]?.ta_num || "",
@@ -68,6 +90,8 @@ function accionToForm(accion, tipos) {
     accobs: String(accion.accobs || ""),
     accdirnvo: String(accion.accdirnvo || ""),
     acctelnvo: String(accion.acctelnvo || "").trim(),
+    acccontactoFecha: agenda.fecha,
+    acccontactoHora: agenda.hora,
   };
 }
 
@@ -120,6 +144,7 @@ export default function AccionPersonaModal({
   const mostrarDireccionNueva =
     resultadoNorm === "DIRECCION NUEVA" || resultadoNorm === "MAIL NUEVO";
   const mostrarTelefonoNuevo = resultadoNorm === "TELEFONO INCORRECTO";
+  const mostrarAgenda = Number(resultadoSeleccionado?.resagendar) === 1;
 
   const dictation = useSpeechDictation({
     onResult: (text) => {
@@ -175,6 +200,8 @@ export default function AccionPersonaModal({
       resnum: "",
       accdirnvo: "",
       acctelnvo: "",
+      acccontactoFecha: "",
+      acccontactoHora: "",
     }));
     setOpenMenu(null);
   };
@@ -185,6 +212,8 @@ export default function AccionPersonaModal({
       resnum: row.resnum,
       accdirnvo: "",
       acctelnvo: "",
+      acccontactoFecha: "",
+      acccontactoHora: "",
     }));
     setOpenMenu(null);
   };
@@ -194,7 +223,8 @@ export default function AccionPersonaModal({
     form.restipo !== "" &&
     Boolean(form.resnum) &&
     (!mostrarDireccionNueva || form.accdirnvo.trim() !== "") &&
-    (!mostrarTelefonoNuevo || form.acctelnvo.trim() !== "");
+    (!mostrarTelefonoNuevo || form.acctelnvo.trim() !== "") &&
+    (!mostrarAgenda || (form.acccontactoFecha.trim() !== "" && form.acccontactoHora.trim() !== ""));
 
   const handleSubmit = () => {
     if (!canSave || saving) return;
@@ -205,13 +235,14 @@ export default function AccionPersonaModal({
       accobs: form.accobs.trim(),
       accdirnvo: mostrarDireccionNueva ? form.accdirnvo.trim() : "",
       acctelnvo: mostrarTelefonoNuevo ? form.acctelnvo.trim() : "",
+      acccontacto: mostrarAgenda ? joinAgendaValue(form.acccontactoFecha, form.acccontactoHora) : "",
       accvaluacion: Number(form.accvaluacion) || 0,
     });
   };
 
   return (
     <div className="afi-action-modal-backdrop is-open" onClick={onClose}>
-      <div className="afi-action-modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`afi-action-modal ${mostrarAgenda ? "has-agenda" : ""}`} onClick={(e) => e.stopPropagation()}>
         <div className="afi-action-modal__body">
           <h2 className="afi-action-modal__title">{personaNombre}</h2>
           <div className="afi-action-modal__date">
@@ -333,7 +364,7 @@ export default function AccionPersonaModal({
                     className="afi-action-modal__textarea"
                     placeholder="Observación"
                     value={form.accobs}
-                    rows={2}
+                    rows={mostrarAgenda ? 1 : 2}
                     onChange={(e) => setField("accobs", e.target.value)}
                   />
                   <div className="afi-action-modal__underline" />
@@ -379,6 +410,36 @@ export default function AccionPersonaModal({
                     inputMode="numeric"
                   />
                   <div className="afi-action-modal__underline" />
+                </div>
+              ) : null}
+              {mostrarAgenda ? (
+                <div className="afi-action-modal__agenda-grid">
+                  <div className="afi-action-modal__text-field afi-action-modal__agenda-field">
+                    <label className="afi-action-modal__agenda-label" htmlFor="accion-agenda-fecha">
+                      Fecha de agenda
+                    </label>
+                    <input
+                      id="accion-agenda-fecha"
+                      className="afi-action-modal__input"
+                      type="date"
+                      value={form.acccontactoFecha}
+                      onChange={(e) => setField("acccontactoFecha", e.target.value)}
+                    />
+                    <div className="afi-action-modal__underline" />
+                  </div>
+                  <div className="afi-action-modal__text-field afi-action-modal__agenda-field">
+                    <label className="afi-action-modal__agenda-label" htmlFor="accion-agenda-hora">
+                      Hora
+                    </label>
+                    <input
+                      id="accion-agenda-hora"
+                      className="afi-action-modal__input"
+                      type="time"
+                      value={form.acccontactoHora}
+                      onChange={(e) => setField("acccontactoHora", e.target.value)}
+                    />
+                    <div className="afi-action-modal__underline" />
+                  </div>
                 </div>
               ) : null}
 

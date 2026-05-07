@@ -604,6 +604,8 @@ function buildAccionesIndex(rows) {
       resnum,
       resnom: cleanText(row.resnom) || "Sin resultado",
       restipo: toNumberOrNull(row.restipo),
+      resagendar: toNumberOrNull(row.resagendar),
+      acccontacto: cleanText(row.acccontacto_input) ? cleanText(row.acccontacto_input).replace(" ", "T") : "",
       estado: buildEstadoAccion(row.restipo),
       accobs: normalizeAccobs(row.accobs),
       accobs2: normalizeAccobs(row.accobs2),
@@ -916,6 +918,7 @@ async function fetchAccionesRowsFromDb() {
       END AS tiene_adjunto,
       r.resnom,
       r.restipo,
+      r.resagendar,
       aa.nombre AS asesor_nombre,
       aa.apellido AS asesor_apellido,
       LTRIM(RTRIM(
@@ -1094,6 +1097,8 @@ async function refreshAccionesForDocumento(cedula) {
       a.acccuando,
       CONVERT(varchar(19), a.acccuando, 120) AS acccuando_texto,
       CONVERT(varchar(23), a.acccuando, 121) AS acccuando_iso_local,
+      a.acccontacto,
+      CONVERT(varchar(16), a.acccontacto, 120) AS acccontacto_input,
       CASE
         WHEN a.acccuando >= DATEADD(MINUTE, -5, SYSDATETIME()) THEN 1
         ELSE 0
@@ -1114,6 +1119,7 @@ async function refreshAccionesForDocumento(cedula) {
       END AS tiene_adjunto,
       r.resnom,
       r.restipo,
+      r.resagendar,
       aa.nombre AS asesor_nombre,
       aa.apellido AS asesor_apellido,
       LTRIM(RTRIM(

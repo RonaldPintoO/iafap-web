@@ -20,7 +20,8 @@ export const PERSONAS_FILTER_OPTIONS = {
 };
 
 export const AGENDADOS_FILTERS = [
-  { id: "fecha", label: "Fecha", options: ["Todos", "Hoy", "Mañana", "Esta Semana", "Semana Próxima"], defaultValue: "Todos" },
+  { id: "estado", label: "Estado", options: ["Pendientes", "Cerrados", "Todos"], defaultValue: "Pendientes" },
+  { id: "fecha", label: "Fecha", options: ["Todos", "Próximos", "Vencidos", "Hoy", "Mañana", "Esta Semana", "Semana Próxima"], defaultValue: "Todos" },
   {
     id: "dptoAg",
     label: "Dpto.",

@@ -10,13 +10,13 @@ export const PERIODOS = [
 export const ESTATUS = ["Todos", "En Proceso", "Activos", "Inactivos"];
 
 export const LEYENDA = [
-  { forestado: 12, color: "#000000", label: "Anulado" },
-  { forestado: "4/5", color: "#d32f2f", label: "Rechazado" },
-  { forestado: 6, color: "#303f9f", label: "Sin Actividad" },
-  { forestado: 3, color: "#c8e6c9", label: "Recibido sin errores" },
-  { forestado: 7, color: "#43a047", label: "Ingresado a BPS" },
-  { forestado: "8/9/10/11", color: "#ffa000", label: "Faltante" },
-  { forestado: null, color: "#ffffff", label: "Vacío", border: "#000000" },
+  { color: "#000000", label: "Anulado" },
+  { color: "#d32f2f", label: "Rechazado" },
+  { color: "#2f3fa3", label: "Sin Actividad" },
+  { color: "#cfead1", label: "Recibido sin errores" },
+  { color: "#43a047", label: "Ingresado a BPS" },
+  { color: "#ffa000", label: "Faltante" },
+  { color: "#ffffff", label: "Vacío", border: "#000000" },
 ];
 
 

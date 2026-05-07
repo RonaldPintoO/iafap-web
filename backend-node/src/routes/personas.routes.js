@@ -9,6 +9,7 @@ router.get("/filtros", personasController.getFiltros);
 router.get("/snapshot/status", personasController.getSnapshotStatus);
 router.post("/snapshot/refresh", personasController.refreshSnapshot);
 router.get("/acciones/catalogos", personasController.getAccionesCatalogos);
+router.get("/agendados", personasController.getAgendados);
 router.get("/acciones/:accnum/adjunto", personasController.getAccionAdjuntoPdf);
 router.put("/acciones/:accnum", personasController.actualizarAccionPersona);
 router.get("/:cedula/acciones", personasController.getAccionesPersona);

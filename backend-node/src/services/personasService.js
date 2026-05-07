@@ -15,6 +15,25 @@ function normalizeText(value) {
     .toUpperCase();
 }
 
+function normalizeCatalogText(value) {
+  return normalizeText(value);
+}
+
+function normalizeAccobs(value) {
+  const text = cleanText(value);
+  if (!text) return "";
+
+  const normalizations = [
+    { pattern: /^#*\s*consultado por asesor/i, value: "" },
+  ];
+
+  for (const rule of normalizations) {
+    if (rule.pattern.test(text)) return rule.value;
+  }
+
+  return text;
+}
+
 function safePage(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 1) return 1;
@@ -34,24 +53,6 @@ function toNumberOrNull(value) {
 }
 
 
-const RESULTADOS_ACCIONES_VISIBLES = [
-  "DIRECCION NUEVA",
-  "FIN DE SEMANA",
-  "GEO MANUAL",
-  "LLAMADA AGENDADA",
-  "MAIL NUEVO",
-  "NO ATIENDE",
-  "NO ESTABA",
-  "NO HABIA NADIE",
-  "NO VIVE AHI",
-  "SIN ACTIVIDAD",
-  "TELEFONO INCORRECTO",
-];
-
-function normalizeCatalogText(value) {
-  return normalizeText(value).replace(/\s+/g, " ");
-}
-
 function toSmallInt(value, fieldName) {
   const n = Number(value);
 
@@ -68,6 +69,98 @@ function buildSqlCharValue(value, maxLength) {
   const text = cleanText(value);
   if (!text) return "";
   return text.slice(0, maxLength);
+}
+
+function formatDateOnly(value) {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return cleanText(value);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function formatDateTimeLocal(value) {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return cleanText(value);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+function formatSqlDateTimeInput(value) {
+  const text = cleanText(value);
+  if (!text) return null;
+
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (!match) return null;
+
+  const yyyy = Number(match[1]);
+  const mm = Number(match[2]);
+  const dd = Number(match[3]);
+  const hh = Number(match[4] || 0);
+  const min = Number(match[5] || 0);
+  const ss = Number(match[6] || 0);
+
+  const valid =
+    yyyy >= 1900 && yyyy <= 2100 &&
+    mm >= 1 && mm <= 12 &&
+    dd >= 1 && dd <= 31 &&
+    hh >= 0 && hh <= 23 &&
+    min >= 0 && min <= 59 &&
+    ss >= 0 && ss <= 59;
+
+  if (!valid) return null;
+
+  return `${match[1]}-${match[2]}-${match[3]} ${String(hh).padStart(2, "0")}:${String(min).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+}
+
+function getAcccontactoForResultado({ resultado, payload }) {
+  const requiereAgenda = Number(resultado?.resagendar) === 1;
+
+  if (!requiereAgenda) {
+    return { requiereAgenda, acccontactoSql: "1753-01-01 00:00:00" };
+  }
+
+  const acccontactoSql = formatSqlDateTimeInput(payload?.acccontacto);
+
+  if (!acccontactoSql) {
+    const error = new Error("Debe ingresar fecha y hora para la agenda");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return { requiereAgenda, acccontactoSql };
+}
+
+function buildDireccionCompleta(row) {
+  const partes = [];
+  const calle = cleanText(row.calle);
+  const puerta = cleanText(row.nro_puerta);
+  const apto = cleanText(row.apto);
+  const bis = cleanText(row.bis);
+  const entre1 = cleanText(row.entre1);
+  const entre2 = cleanText(row.entre2);
+  const manzana = cleanText(row.manzana);
+  const solar = cleanText(row.solar);
+  const ruta = cleanText(row.ruta);
+  const km = cleanText(row.km);
+
+  if (calle || puerta) partes.push([calle, puerta].filter(Boolean).join(" "));
+  if (apto) partes.push(`Apto. ${apto}`);
+  if (bis) partes.push(`Bis ${bis}`);
+  if (entre1 || entre2) partes.push(`Entre ${[entre1, entre2].filter(Boolean).join(" y ")}`);
+  if (manzana) partes.push(`Mza. ${manzana}`);
+  if (solar) partes.push(`Solar ${solar}`);
+  if (ruta) partes.push(`Ruta ${ruta}`);
+  if (km) partes.push(`Km ${km}`);
+
+  return partes.filter(Boolean).join(", ");
 }
 
 
@@ -534,7 +627,6 @@ async function refreshPersonasSnapshot() {
 
 async function getAccionesCatalogos() {
   const pool = await getPool();
-  const visibles = RESULTADOS_ACCIONES_VISIBLES.map(normalizeCatalogText);
 
   const tiposResult = await pool.request().query(`
     SELECT
@@ -542,19 +634,12 @@ async function getAccionesCatalogos() {
       LTRIM(RTRIM(ta_nom)) AS ta_nom,
       ta_tipo,
       ta_activo
-    FROM [dbo].[TIPOACCION]
+    FROM [dbo].[TIPOACCION] WITH (NOLOCK)
     WHERE ta_activo = 1
     ORDER BY ta_num
   `);
 
-  const request = pool.request();
-  visibles.forEach((name, idx) => {
-    request.input(`resnom${idx}`, sql.VarChar(80), name);
-  });
-
-  const inList = visibles.map((_, idx) => `@resnom${idx}`).join(", ");
-
-  const resultadosResult = await request.query(`
+  const resultadosResult = await pool.request().query(`
     SELECT
       resnum,
       LTRIM(RTRIM(resnom)) AS resnom,
@@ -566,24 +651,12 @@ async function getAccionesCatalogos() {
       resnvodir,
       resnvotel,
       resagendar
-    FROM [dbo].[RESULTADOS]
-    WHERE UPPER(LTRIM(RTRIM(resnom))) COLLATE Latin1_General_CI_AI IN (${inList})
+    FROM [dbo].[RESULTADOS] WITH (NOLOCK)
+    WHERE restipo IN (0, 1)
+      AND ISNULL(rescelular, 0) IN (1, 2)
     ORDER BY
-      CASE UPPER(LTRIM(RTRIM(resnom))) COLLATE Latin1_General_CI_AI
-        WHEN 'DIRECCION NUEVA' THEN 1
-        WHEN 'FIN DE SEMANA' THEN 2
-        WHEN 'GEO MANUAL' THEN 3
-        WHEN 'LLAMADA AGENDADA' THEN 4
-        WHEN 'MAIL NUEVO' THEN 5
-        WHEN 'NO ATIENDE' THEN 6
-        WHEN 'NO ESTABA' THEN 7
-        WHEN 'NO HABIA NADIE' THEN 8
-        WHEN 'NO VIVE AHI' THEN 9
-        WHEN 'SIN ACTIVIDAD' THEN 10
-        WHEN 'TELEFONO INCORRECTO' THEN 11
-        ELSE 99
-      END,
-      resnom
+      restipo,
+      LTRIM(RTRIM(resnom))
   `);
 
   return {
@@ -616,7 +689,7 @@ async function validarCatalogoAccion({ acctipo, resnum }) {
     .input("acctipo", sql.SmallInt, acctipo)
     .query(`
       SELECT TOP (1) ta_num
-      FROM [dbo].[TIPOACCION]
+      FROM [dbo].[TIPOACCION] WITH (NOLOCK)
       WHERE ta_num = @acctipo
         AND ta_activo = 1
     `);
@@ -627,29 +700,31 @@ async function validarCatalogoAccion({ acctipo, resnum }) {
     throw error;
   }
 
-  const visibles = RESULTADOS_ACCIONES_VISIBLES.map(normalizeCatalogText);
-  const request = pool.request().input("resnum", sql.SmallInt, resnum);
-
-  visibles.forEach((name, idx) => {
-    request.input(`resnom${idx}`, sql.VarChar(80), name);
-  });
-
-  const inList = visibles.map((_, idx) => `@resnom${idx}`).join(", ");
-
-  const resultadoResult = await request.query(`
-    SELECT TOP (1)
-      resnum,
-      LTRIM(RTRIM(resnom)) AS resnom,
-      restipo
-    FROM [dbo].[RESULTADOS]
-    WHERE resnum = @resnum
-      AND UPPER(LTRIM(RTRIM(resnom))) COLLATE Latin1_General_CI_AI IN (${inList})
-  `);
+  const resultadoResult = await pool
+    .request()
+    .input("resnum", sql.SmallInt, resnum)
+    .query(`
+      SELECT TOP (1)
+        resnum,
+        LTRIM(RTRIM(resnom)) AS resnom,
+        restipo,
+        resagendar,
+        rescelular,
+        restransfiere,
+        resestrellas,
+        rescheck,
+        resnvodir,
+        resnvotel
+      FROM [dbo].[RESULTADOS] WITH (NOLOCK)
+      WHERE resnum = @resnum
+        AND restipo IN (0, 1)
+        AND ISNULL(rescelular, 0) IN (1, 2)
+    `);
 
   const resultado = resultadoResult.recordset?.[0];
 
   if (!resultado) {
-    const error = new Error("El resultado seleccionado no está habilitado");
+    const error = new Error("El resultado seleccionado no existe");
     error.statusCode = 400;
     throw error;
   }
@@ -682,6 +757,7 @@ async function crearAccionPersona({ cedula, authUser, payload }) {
 
   const resultado = await validarCatalogoAccion({ acctipo, resnum });
   const resultadoNorm = normalizeCatalogText(resultado.resnom);
+  const { acccontactoSql } = getAcccontactoForResultado({ resultado, payload });
 
   const accobs = buildSqlCharValue(payload?.accobs, 512);
   const accdirnvo =
@@ -716,6 +792,7 @@ async function crearAccionPersona({ cedula, authUser, payload }) {
     .input("resnum", sql.SmallInt, resnum)
     .input("accobs", sql.VarChar(512), accobs || null)
     .input("accvaluacion", sql.SmallInt, accvaluacion)
+    .input("acccontacto", sql.VarChar(19), acccontactoSql)
     .input("perci", sql.Int, Number(cedulaTxt))
     .input("asenum", sql.Int, Number(asenumTxt))
     .input("accobs2", sql.Char(80), "")
@@ -744,7 +821,7 @@ async function crearAccionPersona({ cedula, authUser, payload }) {
         @acctipo,
         @resnum,
         @accobs,
-        CONVERT(datetime, '17530101', 112),
+        CONVERT(datetime, @acccontacto, 120),
         0,
         @accvaluacion,
         @perci,
@@ -785,6 +862,7 @@ async function actualizarAccionPersona({ accnum, authUser, payload }) {
 
   const resultado = await validarCatalogoAccion({ acctipo, resnum });
   const resultadoNorm = normalizeCatalogText(resultado.resnom);
+  const { acccontactoSql } = getAcccontactoForResultado({ resultado, payload });
 
   const accobs = buildSqlCharValue(payload?.accobs, 512);
   const accdirnvo =
@@ -821,6 +899,7 @@ async function actualizarAccionPersona({ accnum, authUser, payload }) {
     .input("resnum", sql.SmallInt, resnum)
     .input("accobs", sql.VarChar(512), accobs || null)
     .input("accvaluacion", sql.SmallInt, accvaluacion)
+    .input("acccontacto", sql.VarChar(19), acccontactoSql)
     .input("accobs2", sql.Char(80), "")
     .input("acctelnvo", sql.Char(40), acctelnvo || null)
     .input("accdirnvo", sql.Char(200), accdirnvo || null)
@@ -830,6 +909,7 @@ async function actualizarAccionPersona({ accnum, authUser, payload }) {
         acctipo = @acctipo,
         resnum = @resnum,
         accobs = @accobs,
+        acccontacto = CONVERT(datetime, @acccontacto, 120),
         accvaluacion = @accvaluacion,
         accobs2 = @accobs2,
         acctelnvo = @acctelnvo,
@@ -884,6 +964,215 @@ async function actualizarAccionPersona({ accnum, authUser, payload }) {
   };
 }
 
+async function getAgendados({ asesor, estado = "Pendientes", fecha = "Todos", departamento = "Todos", localidad = "Todos" }) {
+  const asesorTxt = cleanText(asesor);
+
+  if (!asesorTxt) {
+    const error = new Error("No se pudo identificar el asesor para consultar agendados");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const estadoFiltro = normalizeCatalogText(estado || "Pendientes");
+  const fechaFiltro = normalizeCatalogText(fecha || "Todos");
+  const departamentoNorm = normalizeCatalogText(departamento || "Todos");
+  const localidadNorm = normalizeCatalogText(localidad || "Todos");
+
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input("asesor", sql.Int, Number(asesorTxt))
+    .query(`
+      SELECT TOP (500)
+        a.accnum,
+        a.acccontacto AS fecha_agendada,
+        CONVERT(varchar(19), a.acccontacto, 120) AS fecha_agendada_sql,
+        a.acccuando AS fecha_accion,
+        CONVERT(varchar(19), a.acccuando, 120) AS fecha_accion_sql,
+        a.asenum AS asesor,
+        a.perci AS documento,
+        p.perprinom AS primer_nombre,
+        p.persegnom AS segundo_nombre,
+        p.perpriape AS primer_apellido,
+        p.persegape AS segundo_apellido,
+        p.perfecnac AS fecha_nacimiento,
+        p.pertel AS telefono,
+        p.percel AS celular,
+        p.perdepto AS departamento,
+        p.perciudad AS localidad,
+        p.percalle AS calle,
+        p.perpuerta AS nro_puerta,
+        p.perapto AS apto,
+        p.perbis AS bis,
+        p.perentre1 AS entre1,
+        p.perentre2 AS entre2,
+        p.permanzana AS manzana,
+        p.persolar AS solar,
+        p.perruta AS ruta,
+        p.perkm AS km,
+        r.resnom AS resultado,
+        r.resnum,
+        r.restipo,
+        a.accobs AS observacion,
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM [dbo].[ACCIONES] ax WITH (NOLOCK)
+            WHERE ax.perci = a.perci
+              AND TRY_CAST(ax.asenum AS int) = TRY_CAST(a.asenum AS int)
+              AND ax.accnum <> a.accnum
+              AND ax.acccuando > a.acccontacto
+          ) THEN 1
+          ELSE 0
+        END AS cerrado,
+        (
+          SELECT TOP (1) CONVERT(varchar(19), ax.acccuando, 120)
+          FROM [dbo].[ACCIONES] ax WITH (NOLOCK)
+          WHERE ax.perci = a.perci
+            AND TRY_CAST(ax.asenum AS int) = TRY_CAST(a.asenum AS int)
+            AND ax.accnum <> a.accnum
+            AND ax.acccuando > a.acccontacto
+          ORDER BY ax.acccuando ASC, ax.accnum ASC
+        ) AS fecha_cierre_sql,
+        de.tipo_documento AS tipo_documento_extranjero,
+        de.id_pais AS id_pais_extranjero,
+        de.documento AS documento_extranjero,
+        pb.nombre AS pais_extranjero
+      FROM [dbo].[ACCIONES] a WITH (NOLOCK)
+      INNER JOIN [dbo].[RESULTADOS] r WITH (NOLOCK)
+        ON r.resnum = a.resnum
+       AND ISNULL(r.resagendar, 0) = 1
+      INNER JOIN [dbo].[PERSONA] p WITH (NOLOCK)
+        ON p.perci = a.perci
+      LEFT JOIN [dbo].[DOCUMENTO_EXTRANJERO] de WITH (NOLOCK)
+        ON TRY_CAST(de.ci_ficticia AS bigint) = TRY_CAST(p.perci AS bigint)
+      LEFT JOIN [dbo].[PAISES_BPS] pb WITH (NOLOCK)
+        ON pb.idpais = de.id_pais
+      WHERE TRY_CAST(a.asenum AS int) = @asesor
+        AND a.acccontacto >= CONVERT(datetime, '17530102', 112)
+      ORDER BY a.acccontacto ASC, a.accnum DESC
+    `);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const afterTomorrow = new Date(today);
+  afterTomorrow.setDate(afterTomorrow.getDate() + 2);
+
+  const weekEnd = new Date(today);
+  weekEnd.setDate(weekEnd.getDate() + (7 - weekEnd.getDay()));
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const nextWeekStart = new Date(weekEnd);
+  nextWeekStart.setDate(nextWeekStart.getDate() + 1);
+  nextWeekStart.setHours(0, 0, 0, 0);
+
+  const nextWeekEnd = new Date(nextWeekStart);
+  nextWeekEnd.setDate(nextWeekEnd.getDate() + 6);
+  nextWeekEnd.setHours(23, 59, 59, 999);
+
+  const rows = Array.isArray(result.recordset) ? result.recordset : [];
+  const items = rows
+    .map((row) => {
+      const tipoDocumentoExtranjero = cleanText(row.tipo_documento_extranjero);
+      const documentoExtranjero = cleanText(row.documento_extranjero);
+      const idPaisExtranjero = toNumberOrNull(row.id_pais_extranjero);
+      const paisExtranjero = cleanText(row.pais_extranjero);
+      const esExtranjero = Boolean(tipoDocumentoExtranjero || documentoExtranjero || idPaisExtranjero !== null);
+      const pais = esExtranjero ? paisExtranjero || "Extranjero" : "Uruguay";
+      const fechaAgendada = row.fecha_agendada instanceof Date ? row.fecha_agendada : new Date(row.fecha_agendada);
+
+      return {
+        accnum: toNumberOrNull(row.accnum),
+        fechaAgendada: row.fecha_agendada_sql || formatDateTimeLocal(row.fecha_agendada),
+        fechaAgendadaIso: row.fecha_agendada_sql ? String(row.fecha_agendada_sql).replace(" ", "T") : null,
+        fechaAgendadaTexto: formatDateTimeLocal(row.fecha_agendada_sql || row.fecha_agendada),
+        fechaAccion: row.fecha_accion_sql || formatDateTimeLocal(row.fecha_accion),
+        cerrado: toNumberOrNull(row.cerrado) === 1,
+        fechaCierre: row.fecha_cierre_sql || null,
+        estadoAgendado: toNumberOrNull(row.cerrado) === 1
+          ? "Cerrado"
+          : fechaAgendada < today
+            ? "Vencido"
+            : fechaAgendada < tomorrow
+              ? "Hoy"
+              : "Próximo",
+        diasVencido: toNumberOrNull(row.cerrado) === 1 || fechaAgendada >= today
+          ? 0
+          : Math.max(1, Math.floor((today.getTime() - fechaAgendada.getTime()) / 86400000)),
+        asesor: cleanText(row.asesor),
+        documento: cleanText(row.documento),
+        nombreCompleto: [row.primer_nombre, row.segundo_nombre, row.primer_apellido, row.segundo_apellido].map(cleanText).filter(Boolean).join(" "),
+        primerNombre: cleanText(row.primer_nombre),
+        segundoNombre: cleanText(row.segundo_nombre),
+        primerApellido: cleanText(row.primer_apellido),
+        segundoApellido: cleanText(row.segundo_apellido),
+        fechaNacimiento: formatDateOnly(row.fecha_nacimiento),
+        telefono: cleanText(row.telefono),
+        celular: cleanText(row.celular),
+        departamento: cleanText(row.departamento),
+        localidad: cleanText(row.localidad),
+        calle: cleanText(row.calle),
+        nroPuerta: cleanText(row.nro_puerta),
+        apto: cleanText(row.apto),
+        bis: cleanText(row.bis),
+        entre1: cleanText(row.entre1),
+        entre2: cleanText(row.entre2),
+        manzana: cleanText(row.manzana),
+        solar: cleanText(row.solar),
+        ruta: cleanText(row.ruta),
+        km: cleanText(row.km),
+        direccion: buildDireccionCompleta(row),
+        resultado: cleanText(row.resultado),
+        resnum: toNumberOrNull(row.resnum),
+        restipo: toNumberOrNull(row.restipo),
+        observacion: normalizeAccobs(row.observacion),
+        pais,
+        esExtranjero,
+        cedulaFicticia: esExtranjero ? cleanText(row.documento) : "",
+        tipoDocumentoExtranjero,
+        documentoExtranjero,
+        idPaisExtranjero,
+        paisExtranjero,
+        _fechaAgendadaDate: fechaAgendada,
+      };
+    })
+    .filter((item) => {
+      if (departamentoNorm && departamentoNorm !== "TODOS" && normalizeCatalogText(item.departamento) !== departamentoNorm) {
+        return false;
+      }
+
+      if (localidadNorm && localidadNorm !== "TODOS" && normalizeCatalogText(item.localidad) !== localidadNorm) {
+        return false;
+      }
+
+      const d = item._fechaAgendadaDate;
+      if (!(d instanceof Date) || Number.isNaN(d.getTime())) return false;
+
+      if (estadoFiltro === "PENDIENTES" && item.cerrado) return false;
+      if (estadoFiltro === "CERRADOS" && !item.cerrado) return false;
+
+      if (fechaFiltro === "HOY") return d >= today && d < tomorrow;
+      if (fechaFiltro === "MANANA") return d >= tomorrow && d < afterTomorrow;
+      if (fechaFiltro === "ESTA SEMANA") return d >= today && d <= weekEnd;
+      if (fechaFiltro === "SEMANA PROXIMA") return d >= nextWeekStart && d <= nextWeekEnd;
+      if (fechaFiltro === "VENCIDOS") return d < today;
+      if (fechaFiltro === "PROXIMOS") return d >= today;
+
+      return true;
+    })
+    .map(({ _fechaAgendadaDate, ...item }) => item);
+
+  return {
+    asesor: asesorTxt,
+    total: items.length,
+    items,
+  };
+}
+
 async function getAccionesPersona({ cedula, authUser }) {
   const cedulaTxt = String(cedula || "").trim();
 
@@ -924,6 +1213,7 @@ module.exports = {
   getLocalidades,
   getFiltrosPersonas,
   getAccionesCatalogos,
+  getAgendados,
   crearAccionPersona,
   actualizarAccionPersona,
   refreshPersonasSnapshot,

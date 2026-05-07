@@ -12,6 +12,9 @@ export default function FiltrosModal({
   openDropdownId,
   setOpenDropdownId,
   personasFilterCatalogs,
+  agendadosDepartamentoOptions = ["Todos"],
+  agendadosLocalidadOptions = ["Todos"],
+  agendadosLocalidadesLoading = false,
   onAcceptPersonas,
   personasFiltrosError,
 }) {
@@ -181,10 +184,22 @@ export default function FiltrosModal({
           {tab === "agendados" && (
             <>
               <ModalDropdown
+                id="estadoAgendado"
+                label="Estado"
+                value={agendadosValues.estado}
+                options={["Pendientes", "Cerrados", "Todos"]}
+                openDropdownId={openDropdownId}
+                setOpenDropdownId={setOpenDropdownId}
+                onChange={(next) =>
+                  setAgendadosValues((p) => ({ ...p, estado: next }))
+                }
+              />
+
+              <ModalDropdown
                 id="fecha"
                 label="Fecha"
                 value={agendadosValues.fecha}
-                options={["Todos", "Hoy", "Mañana", "Esta Semana", "Semana Próxima"]}
+                options={["Todos", "Próximos", "Vencidos", "Hoy", "Mañana", "Esta Semana", "Semana Próxima"]}
                 openDropdownId={openDropdownId}
                 setOpenDropdownId={setOpenDropdownId}
                 onChange={(next) =>
@@ -196,23 +211,11 @@ export default function FiltrosModal({
                 id="dptoAg"
                 label="Dpto."
                 value={agendadosValues.dptoAg}
-                options={[
-                  "Todos",
-                  "CANELONES",
-                  "CERRO LARGO",
-                  "LAVALLEJA",
-                  "MALDONADO",
-                  "MONTEVIDEO",
-                  "PAYSANDU",
-                  "SALTO",
-                  "SAN JOSE",
-                  "SORIANO",
-                  "TACUAREMBO",
-                ]}
+                options={agendadosDepartamentoOptions}
                 openDropdownId={openDropdownId}
                 setOpenDropdownId={setOpenDropdownId}
                 onChange={(next) =>
-                  setAgendadosValues((p) => ({ ...p, dptoAg: next }))
+                  setAgendadosValues((p) => ({ ...p, dptoAg: next, loc: "Todos" }))
                 }
               />
 
@@ -220,12 +223,19 @@ export default function FiltrosModal({
                 id="loc"
                 label="Loc."
                 value={agendadosValues.loc}
-                options={["Todos", "(pendiente: depende del Dpto.)"]}
+                options={
+                  agendadosValues.dptoAg === "Todos"
+                    ? ["Todos"]
+                    : agendadosLocalidadesLoading
+                      ? ["Todos", "Cargando..."]
+                      : agendadosLocalidadOptions
+                }
                 openDropdownId={openDropdownId}
                 setOpenDropdownId={setOpenDropdownId}
-                onChange={(next) =>
-                  setAgendadosValues((p) => ({ ...p, loc: next }))
-                }
+                onChange={(next) => {
+                  if (next === "Cargando...") return;
+                  setAgendadosValues((p) => ({ ...p, loc: next }));
+                }}
               />
             </>
           )}
