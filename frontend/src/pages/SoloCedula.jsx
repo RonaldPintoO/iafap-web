@@ -1,7 +1,7 @@
 import { authFetch } from "../components/auth/auth.api";
 import { getAuthSession } from "../components/auth/auth.storage";
 import { useEffect, useMemo, useState } from "react";
-import PersonaDetalle from "../components/afiliaciones/PersonaDetalle";
+import PersonaDetalle from "../components/afiliaciones/personas/PersonaDetalle";
 import FormularioCargaModal from "../components/formularios/FormularioCargaModal";
 import {
   buildDefaultDatos,

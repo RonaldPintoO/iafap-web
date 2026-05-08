@@ -6,7 +6,7 @@ async function getPersonas(req, res) {
     const {
       asesor,
       page = 1,
-      page_size = 100,
+      page_size = 50,
       localidad = "Todos",
       texto = "",
       tipo = "Todos",

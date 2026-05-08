@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import PaginacionPersona from "../personas/PaginacionPersona";
+
 function cleanValue(value, fallback = "-") {
   if (value === null || value === undefined) return fallback;
   const text = String(value).trim();
@@ -99,6 +102,13 @@ function buildEstadoTexto(item) {
   return cleanValue(item?.estadoAgendado, "Pendiente");
 }
 
+function scrollAfiliacionesToTop() {
+  requestAnimationFrame(() => {
+    const scrollTarget = document.querySelector(".main") || document.scrollingElement;
+    scrollTarget?.scrollTo?.({ top: 0, behavior: "smooth" });
+  });
+}
+
 function AgendadoCard({ item, onOpenPersona, onRegistrarGestion }) {
   const esExtranjero = Boolean(item?.esExtranjero);
 
@@ -178,12 +188,22 @@ export default function AgendadosPanel({
   handleResetAgendados,
   setShowFilters,
   agendadosItems = [],
+  totalAgendados = 0,
+  page = 1,
+  totalPages = 0,
+  onPrevPage,
+  onNextPage,
+  onGoToPage,
   agendadosLoading = false,
   agendadosError = "",
   agendadosRefreshing = false,
   onOpenPersona,
   onRegistrarGestion,
 }) {
+  useEffect(() => {
+    scrollAfiliacionesToTop();
+  }, [page]);
+
   return (
     <div className="afi-agendados">
       <div className="afi-ag-header">
@@ -203,7 +223,14 @@ export default function AgendadosPanel({
       ) : agendadosItems.length === 0 ? (
         <div className="afi-ag-empty">No hay agendados para los filtros seleccionados.</div>
       ) : (
-        <div className="afi-ag-list">
+        <>
+          <div className="afi-count afi-count--agendados">
+            Mostrando {agendadosItems.length} de {totalAgendados} agendados
+            {totalPages > 0 ? ` · Pág. ${page}/${totalPages}` : ""}
+            {agendadosRefreshing ? " · Actualizando..." : ""}
+          </div>
+
+          <div className="afi-ag-list">
           {agendadosItems.map((item) => (
             <AgendadoCard
               key={item.accnum || `${item.documento}-${item.fechaAgendada}`}
@@ -212,7 +239,17 @@ export default function AgendadosPanel({
               onRegistrarGestion={onRegistrarGestion}
             />
           ))}
-        </div>
+          </div>
+
+          <PaginacionPersona
+            page={page}
+            totalPages={totalPages}
+            loading={agendadosLoading || agendadosRefreshing}
+            onPrev={onPrevPage}
+            onNext={onNextPage}
+            onGoToPage={onGoToPage}
+          />
+        </>
       )}
 
       <div className="afi-ag-actions">

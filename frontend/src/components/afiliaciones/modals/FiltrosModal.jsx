@@ -1,5 +1,5 @@
 import ModalDropdown from "./ModalDropdown";
-import { PERSONAS_FILTER_OPTIONS } from "./afiliaciones.utils";
+import { PERSONAS_FILTER_OPTIONS } from "../shared/afiliaciones.utils";
 
 export default function FiltrosModal({
   showFilters,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "../../config/api";
+import { apiFetch } from "../../../config/api";
 
 function puedeEditarAhora(accion, nowMs) {
   if (!accion?.puedeEditar || !accion?.accnum) return false;

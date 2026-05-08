@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import useSpeechDictation from "../../hooks/useSpeechDictation";
+import useSpeechDictation from "../../../hooks/useSpeechDictation";
 
 const EMPTY_FORM = {
   acctipo: "",

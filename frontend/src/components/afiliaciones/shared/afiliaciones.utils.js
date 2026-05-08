@@ -31,7 +31,8 @@ export const AGENDADOS_FILTERS = [
   { id: "loc", label: "Loc.", options: ["Todos", "(pendiente: depende del Dpto.)"], defaultValue: "Todos" },
 ];
 
-export const PERSONAS_PAGE_SIZE = 100;
+export const PERSONAS_PAGE_SIZE = 50;
+export const AGENDADOS_PAGE_SIZE = 10;
 
 export function digitsOnly(v) {
   return v.replace(/\D+/g, "");

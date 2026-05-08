@@ -2,6 +2,9 @@ export default function PersonaCard({ item, onClick }) {
   const nombre = item?.nombreCompleto || "-";
   const departamento = item?.departamento || "-";
   const ciudad = item?.ciudad || "-";
+  const calle = String(item?.calle || "").trim();
+  const nroPuerta = String(item?.nroPuerta || item?.numeroPuerta || "").trim();
+  const direccionTexto = [calle, nroPuerta ? `Nº ${nroPuerta}` : ""].filter(Boolean).join(" ");
 
   const edadTexto =
     item?.edad !== null && item?.edad !== undefined && item?.edad !== ""
@@ -55,6 +58,12 @@ export default function PersonaCard({ item, onClick }) {
         <div className="afi-person-card__location">
           {departamento} - {ciudad}
         </div>
+
+        {direccionTexto ? (
+          <div className="afi-person-card__address">
+            {direccionTexto}
+          </div>
+        ) : null}
 
         <div className="afi-person-card__extra">
           <span className="afi-person-card__age">{edadTexto}</span>

@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      "/auth": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
       "/solo-cedula": {
         target: "http://localhost:8000",
         changeOrigin: true,
@@ -18,6 +22,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       "/configuracion": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/formularios": {
         target: "http://localhost:8000",
         changeOrigin: true,
       },

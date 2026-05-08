@@ -24,7 +24,7 @@ export default function MapaPanel({
     if (edadMaxInput !== "" || edadMinInput !== "") {
       handleApplyEdadFiltro();
     }
-  }, [edadMaxInput]);
+  }, [edadMaxInput, edadMinInput, handleApplyEdadFiltro]);
 
   return (
     <div className="afi-mapa">

@@ -1,7 +1,15 @@
-import ToolbarSelect from "./ToolbarSelect";
+import { useEffect } from "react";
+import ToolbarSelect from "../shared/ToolbarSelect";
 import PaginacionPersona from "./PaginacionPersona";
 import PersonaCard from "./PersonaCard";
 import PersonaDetalle from "./PersonaDetalle";
+
+function scrollAfiliacionesToTop() {
+  requestAnimationFrame(() => {
+    const scrollTarget = document.querySelector(".main") || document.scrollingElement;
+    scrollTarget?.scrollTo?.({ top: 0, behavior: "smooth" });
+  });
+}
 
 /* =========================
    MAIN
@@ -54,6 +62,12 @@ export default function PersonasPanel({
   onSaveNuevaAccion,
   onReloadAccionesCatalogos,
 }) {
+  useEffect(() => {
+    if (!personaSeleccionada) {
+      scrollAfiliacionesToTop();
+    }
+  }, [page, personaSeleccionada]);
+
   if (personaSeleccionada) {
     return (
       <PersonaDetalle

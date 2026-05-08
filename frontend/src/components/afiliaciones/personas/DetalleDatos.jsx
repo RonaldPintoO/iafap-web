@@ -30,6 +30,15 @@ export default function DetalleDatos({ item }) {
     direccionLineas.length > 0 ? direccionLineas.join("\n") : "Sin datos";
 
   const cedulaSoloDigitos = onlyDigits(item?.cedula);
+  const esExtranjero = Boolean(
+    item?.tieneDocumentoExtranjero ||
+      hasValue(item?.documentoExtranjero) ||
+      hasValue(item?.paisExtranjero) ||
+      (item?.idPaisExtranjero !== null && item?.idPaisExtranjero !== undefined),
+  );
+
+  const documentoExtranjero = cleanValue(item?.documentoExtranjero) || "Sin datos";
+  const paisExtranjero = cleanValue(item?.paisExtranjero) || "Sin datos";
 
   const handleLlamar = (telefono) => {
     const tel = onlyDigits(telefono);
@@ -156,6 +165,24 @@ export default function DetalleDatos({ item }) {
               {cleanValue(item?.leyendaAfiliacion) || "Sin datos"}
             </div>
           </div>
+
+          {esExtranjero ? (
+            <>
+              <div className="afi-detail-info-item">
+                <div className="afi-detail-info-label">Documento oficio</div>
+                <div className="afi-detail-info-value">
+                  {documentoExtranjero}
+                </div>
+              </div>
+
+              <div className="afi-detail-info-item">
+                <div className="afi-detail-info-label">País oficio</div>
+                <div className="afi-detail-info-value">
+                  {paisExtranjero}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
       </section>
 

@@ -5,9 +5,9 @@ import DetalleVinculos from "./DetalleVinculos";
 import DetalleAcciones from "./DetalleAcciones";
 import DetalleBps from "./DetalleBps";
 import DetalleFormulario from "./DetalleFormulario";
-import AccionPersonaModal from "./AccionPersonaModal";
-import useDetalleBps from "../../hooks/useDetalleBps";
-import useDetalleFormulario from "../../hooks/useDetalleFormulario";
+import AccionPersonaModal from "../modals/AccionPersonaModal";
+import useDetalleBps from "../../../hooks/useDetalleBps";
+import useDetalleFormulario from "../../../hooks/useDetalleFormulario";
 
 export default function PersonaDetalle({
   item,

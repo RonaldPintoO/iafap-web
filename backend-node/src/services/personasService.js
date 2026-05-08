@@ -138,6 +138,45 @@ function getAcccontactoForResultado({ resultado, payload }) {
   return { requiereAgenda, acccontactoSql };
 }
 
+function compareText(a, b) {
+  return cleanText(a).localeCompare(cleanText(b), "es", {
+    sensitivity: "base",
+    numeric: true,
+  });
+}
+
+function getPuertaNumber(value) {
+  const match = cleanText(value).match(/\d+/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+
+  const n = Number(match[0]);
+  return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+}
+
+function sortItemsByDireccion(items) {
+  return [...items].sort((a, b) => {
+    const byDepartamento = compareText(a.departamento, b.departamento);
+    if (byDepartamento !== 0) return byDepartamento;
+
+    const byCiudad = compareText(a.ciudad, b.ciudad);
+    if (byCiudad !== 0) return byCiudad;
+
+    const byCalle = compareText(a.calle, b.calle);
+    if (byCalle !== 0) return byCalle;
+
+    const byPuerta = getPuertaNumber(a.nroPuerta) - getPuertaNumber(b.nroPuerta);
+    if (byPuerta !== 0) return byPuerta;
+
+    const byDireccion = compareText(a.direccion, b.direccion);
+    if (byDireccion !== 0) return byDireccion;
+
+    const byNombre = compareText(a.nombreCompleto, b.nombreCompleto);
+    if (byNombre !== 0) return byNombre;
+
+    return compareText(a.cedula, b.cedula);
+  });
+}
+
 function buildDireccionCompleta(row) {
   const partes = [];
   const calle = cleanText(row.calle);
@@ -538,7 +577,9 @@ async function getPersonas({
     ley,
   });
 
-  const total = filteredItems.length;
+  const orderedItems = sortItemsByDireccion(filteredItems);
+
+  const total = orderedItems.length;
   const totalPages = total > 0 ? Math.ceil(total / currentPageSize) : 0;
   const normalizedPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
 
@@ -548,7 +589,7 @@ async function getPersonas({
   const snapshotStatus = snapshotService.getSnapshotStatus();
 
   return {
-    items: filteredItems.slice(start, end),
+    items: orderedItems.slice(start, end),
     total,
     page: normalizedPage,
     page_size: currentPageSize,
