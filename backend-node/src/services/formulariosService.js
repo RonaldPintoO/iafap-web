@@ -34,6 +34,16 @@ function safePeriodoDias(value) {
   return Math.min(Math.floor(n), 365);
 }
 
+function getFechaInicioNotificaciones() {
+  const value = cleanText(process.env.FORMULARIOS_NOTIFICACIONES_DESDE) || "2026-05-01";
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return "2026-05-01";
+  }
+
+  return value;
+}
+
 function parseIntOrNull(value) {
   const text = cleanText(value).replace(/\D/g, "");
   if (!text) return null;
@@ -172,27 +182,32 @@ function sameNormalizedText(a, b) {
 
 function apkFormularioColor(forestado) {
   const estado = Number(forestado);
+
   switch (estado) {
+    case 1:
+      return { estadoColor: "#ffffff", estadoBorde: "#000000", estadoFiltro: "En Proceso" };
     case 2:
       return { estadoColor: "#e8eaf6", estadoBorde: "", estadoFiltro: "En Proceso" };
     case 3:
-      return { estadoColor: "#c8e6c9", estadoBorde: "", estadoFiltro: "Inactivos" };
+      return { estadoColor: "#c8e6c9", estadoBorde: "", estadoFiltro: "En Proceso" };
     case 4:
     case 5:
-      return { estadoColor: "#d32f2f", estadoBorde: "", estadoFiltro: "Inactivos" };
+      return { estadoColor: "#d32f2f", estadoBorde: "", estadoFiltro: "Inactivos / Rechazados" };
     case 6:
-      return { estadoColor: "#303f9f", estadoBorde: "", estadoFiltro: "Inactivos" };
+      return { estadoColor: "#303f9f", estadoBorde: "", estadoFiltro: "Inactivos / Rechazados" };
     case 7:
-      return { estadoColor: "#43a047", estadoBorde: "", estadoFiltro: "Inactivos" };
+      return { estadoColor: "#43a047", estadoBorde: "", estadoFiltro: "Ingresados a BPS" };
     case 8:
     case 9:
     case 10:
     case 11:
       return { estadoColor: "#ffa000", estadoBorde: "", estadoFiltro: "En Proceso" };
     case 12:
-      return { estadoColor: "#000000", estadoBorde: "", estadoFiltro: "Inactivos" };
+      return { estadoColor: "#000000", estadoBorde: "", estadoFiltro: "Inactivos / Rechazados" };
+    case 0:
+      return { estadoColor: "#ffffff", estadoBorde: "#000000", estadoFiltro: "Inactivos / Rechazados" };
     default:
-      return { estadoColor: "#ffffff", estadoBorde: "#000000", estadoFiltro: "En Proceso" };
+      return { estadoColor: "#ffffff", estadoBorde: "#000000", estadoFiltro: "Todos" };
   }
 }
 
@@ -218,6 +233,102 @@ function buildEstadoDetalle(row) {
   return detalles.join("\n");
 }
 
+
+function toTimestamp(value) {
+  if (!value) return 0;
+
+  if (value instanceof Date) {
+    const t = value.getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+
+  const text = cleanText(value);
+  if (!text) return 0;
+
+  // SQL Server via mssql normally arrives as Date/ISO, but this keeps the
+  // order safe if a value is ever converted to dd/mm/yyyy in the backend.
+  const ddmmyyyy = text.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (ddmmyyyy) {
+    const [, dd, mm, yyyy, hh = "00", mi = "00", ss = "00"] = ddmmyyyy;
+    const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(mi), Number(ss));
+    const t = d.getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+
+  const d = new Date(text);
+  const t = d.getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+function toFormularioNumber(item) {
+  const n = Number(String(item?.fornum || "").replace(/\D/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getListadoGrupoOrden(item) {
+  const filtro = normalizeText(item?.estadoFiltro);
+
+  if (filtro === "EN PROCESO") return 1;
+  if (filtro === "INGRESADOS A BPS") return 2;
+  if (filtro === "INACTIVOS / RECHAZADOS") return 3;
+
+  return 9;
+}
+
+function normalizeListadoEstatus(value) {
+  const filtro = normalizeText(value);
+
+  if (!filtro || filtro === "TODOS") return "TODOS";
+  if (filtro === "EN PROCESO") return "EN_PROCESO";
+  if (filtro === "INGRESADOS A BPS" || filtro === "INGRESADOS BPS" || filtro === "BPS") return "INGRESADOS_BPS";
+  if (filtro === "INACTIVOS / RECHAZADOS" || filtro === "INACTIVOS" || filtro === "RECHAZADOS") return "INACTIVOS_RECHAZADOS";
+
+  // Alias anterior: si quedó cacheado en el navegador, evita caer en un orden incorrecto.
+  if (filtro === "ACTIVOS") return "INGRESADOS_BPS";
+
+  return filtro;
+}
+
+function getFechaOrdenTimestamp(item) {
+  return toTimestamp(item?.fechaOrden || item?.forcuando);
+}
+
+function sortByFormularioAscThenRecentDesc(a, b) {
+  const formularioDiff = toFormularioNumber(a) - toFormularioNumber(b);
+  if (formularioDiff !== 0) return formularioDiff;
+
+  return getFechaOrdenTimestamp(b) - getFechaOrdenTimestamp(a);
+}
+
+function sortByFechaDescThenFormularioDesc(a, b) {
+  const fechaDiff = getFechaOrdenTimestamp(b) - getFechaOrdenTimestamp(a);
+  if (fechaDiff !== 0) return fechaDiff;
+
+  return toFormularioNumber(b) - toFormularioNumber(a);
+}
+
+function sortFormulariosListado(items, estatus) {
+  const filtro = normalizeListadoEstatus(estatus);
+  const sorted = [...(items || [])];
+
+  // Todos: vista general del lote completo. Se recorre por número de formulario.
+  if (filtro === "TODOS") {
+    return sorted.sort(sortByFormularioAscThenRecentDesc);
+  }
+
+  // En Proceso: seguimiento operativo, también por número de formulario.
+  if (filtro === "EN_PROCESO") {
+    return sorted.sort(sortByFormularioAscThenRecentDesc);
+  }
+
+  // Ingresados a BPS e Inactivos/Rechazados: historial de resultado, más reciente primero.
+  if (filtro === "INGRESADOS_BPS" || filtro === "INACTIVOS_RECHAZADOS") {
+    return sorted.sort(sortByFechaDescThenFormularioDesc);
+  }
+
+  return sorted.sort(sortByFormularioAscThenRecentDesc);
+}
+
 function buildFormularioListItem(row) {
   const accion = cleanText(row.foraccion);
   const visual = apkFormularioColor(row.forestado);
@@ -230,6 +341,7 @@ function buildFormularioListItem(row) {
   return {
     fornum: row.fornum != null ? String(row.fornum).trim() : "",
     forcuando: row.forcuando || null,
+    fechaOrden: row.fecha_orden || row.forcuando || null,
     foraccion: accion,
     forquien_env: cleanText(row.forquien_env),
     forpromoto: cleanText(row.forpromoto),
@@ -317,11 +429,11 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
         ORDER BY f1.[forcuando] DESC
       ) ult
       WHERE f.[forpromoto] = @asenum
-        AND YEAR(f.[forentrega]) > YEAR(GETDATE()) - 2
-        AND (
-          f.[forestado] IN (1,2,3,4,5,6,8,9,10,11)
-          OR ult.[forcuando] > p.[ciefec]
-        )
+        AND COALESCE(
+              ult.[forcuando],
+              CASE WHEN f.[forfec] > CONVERT(datetime, '19000101', 112) THEN f.[forfec] END,
+              CASE WHEN f.[forentrega] > CONVERT(datetime, '19000101', 112) THEN f.[forentrega] END
+            ) >= DATEADD(DAY, -@periodoDias, CAST(GETDATE() AS date))
     ),
     UltimaAccion AS (
       SELECT
@@ -358,6 +470,11 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
             WHEN f.[forestado] = 1 THEN f.[forentrega]
             ELSE u.[forcuando]
           END AS [forcuando]
+        , COALESCE(
+            u.[forcuando],
+            CASE WHEN f.[forfec] > CONVERT(datetime, '19000101', 112) THEN f.[forfec] END,
+            CASE WHEN f.[forentrega] > CONVERT(datetime, '19000101', 112) THEN f.[forentrega] END
+          ) AS [fecha_orden]
         , CASE
             WHEN COALESCE(f.[forci], 0) > 0 THEN 'CI:' + RTRIM(CAST(f.[forci] AS char))
             ELSE ''
@@ -389,11 +506,11 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
     LEFT JOIN [Avisos].[dbo].[ProyAnual] pa WITH (NOLOCK)
       ON pa.[ProyAnualInt] = f.[forproy]
     WHERE f.[forpromoto] = @asenum
-      AND (
-        u.[forcuando] IS NULL
-        OR u.[forcuando] >= DATEADD(DAY, -@periodoDias, CAST(GETDATE() AS date))
-        OR f.[forestado] = 1
-      )
+      AND COALESCE(
+            u.[forcuando],
+            CASE WHEN f.[forfec] > CONVERT(datetime, '19000101', 112) THEN f.[forfec] END,
+            CASE WHEN f.[forentrega] > CONVERT(datetime, '19000101', 112) THEN f.[forentrega] END
+          ) >= DATEADD(DAY, -@periodoDias, CAST(GETDATE() AS date))
     ORDER BY
       CASE WHEN u.[forcuando] IS NULL THEN 0 ELSE 1 END,
       u.[forcuando] DESC,
@@ -408,17 +525,18 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
 
   let items = (result.recordset || []).map(buildFormularioListItem);
 
-  const filtro = normalizeText(estatus);
-  if (filtro && filtro !== "TODOS") {
+  const filtro = normalizeListadoEstatus(estatus);
+  if (filtro !== "TODOS") {
     items = items.filter((item) => {
-      const estadoFiltro = normalizeText(item.estadoFiltro);
-      const accion = normalizeText(item.estadoTexto);
-      if (filtro === "ACTIVOS") return accion === "OK" || accion === "BPS";
-      if (filtro === "INACTIVOS") return estadoFiltro === "INACTIVOS";
-      if (filtro === "EN PROCESO") return estadoFiltro === "EN PROCESO";
+      const estadoFiltro = normalizeListadoEstatus(item.estadoFiltro);
+      if (filtro === "INGRESADOS_BPS") return estadoFiltro === "INGRESADOS_BPS";
+      if (filtro === "INACTIVOS_RECHAZADOS") return estadoFiltro === "INACTIVOS_RECHAZADOS";
+      if (filtro === "EN_PROCESO") return estadoFiltro === "EN_PROCESO";
       return true;
     });
   }
+
+  items = sortFormulariosListado(items, estatus);
 
   return {
     asesor: String(asesor),
@@ -432,17 +550,28 @@ async function getFormulariosByAsesor({ asenum, periodoDias = 30, estatus = "Tod
 
 async function getNotificacionesFormularios({ asenum }) {
   const asesor = validarAsesor(asenum);
+  const fechaInicioNotificaciones = getFechaInicioNotificaciones();
   const pool = await getPool();
 
   const result = await pool
     .request()
     .input("asenum", sql.Int, asesor)
+    .input("fecha_inicio_notificaciones", sql.Date, fechaInicioNotificaciones)
     .query(`
-      WITH FormulariosBase AS (
+      WITH PeriodoActual AS (
+        SELECT TOP 1 c.[ciefec], c.[ciehas]
+        FROM [afapformularios].[dbo].[CIERRES] c WITH (NOLOCK)
+        WHERE c.[ciefec] <= CAST(GETDATE() AS date)
+          AND c.[ciefec] >= '2026-01-01'
+        ORDER BY c.[ciefec] DESC
+      ),
+      FormulariosBase AS (
         SELECT f.[fornum]
         FROM [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+        CROSS JOIN PeriodoActual p
         WHERE f.[forpromoto] = @asenum
           AND YEAR(f.[forentrega]) > YEAR(GETDATE()) - 2
+          AND f.[forestado] IN (2,3,4,5,6,7,8,9,10,11,12)
       ),
       UltimaAccion AS (
         SELECT
@@ -457,23 +586,24 @@ async function getNotificacionesFormularios({ asenum }) {
             , f1.[forpec]
             , LTRIM(RTRIM(f1.[forpecobs])) AS [forpecobs]
             , f1.[forvisto]
-            , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC) AS rn
+            , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC, f1.[fornum] DESC) AS rn
         FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (NOLOCK)
         LEFT JOIN [afapformularios].[dbo].[RECHAZOS] r WITH (NOLOCK)
           ON r.[rechnum] = f1.[forrechnum]
         WHERE f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
+          AND LTRIM(RTRIM(COALESCE(f1.[foraccion], ''))) <> ''
       ),
       UltimoEnvio AS (
         SELECT
               f1.[fornum]
             , NULLIF(f1.[forquien], 0) AS [forquien_env]
-            , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC) AS rn
+            , ROW_NUMBER() OVER (PARTITION BY f1.[fornum] ORDER BY f1.[forcuando] DESC, f1.[fornum] DESC) AS rn
         FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (NOLOCK)
         WHERE f1.[fornum] IN (SELECT [fornum] FROM FormulariosBase)
           AND LTRIM(RTRIM(f1.[foraccion])) = 'ENV'
           AND NULLIF(f1.[forquien], 0) IS NOT NULL
       )
-      SELECT
+      SELECT TOP (100)
             f.[fornum]
           , u.[forcuando]
           , CASE
@@ -496,6 +626,7 @@ async function getNotificacionesFormularios({ asenum }) {
           , f.[forpromoto] AS [forpromoto]
           , COALESCE(ue.[forquien_env], NULLIF(f.[forase], 0), f.[forpromoto]) AS [forquien_env]
       FROM [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
+      CROSS JOIN PeriodoActual p
       INNER JOIN UltimaAccion u
         ON u.[fornum] = f.[fornum]
        AND u.rn = 1
@@ -506,10 +637,10 @@ async function getNotificacionesFormularios({ asenum }) {
         ON pa.[ProyAnualInt] = f.[forproy]
       WHERE f.[forpromoto] = @asenum
         AND UPPER(LTRIM(RTRIM(COALESCE(u.[foraccion], '')))) <> 'ENV'
+        AND u.[forcuando] >= @fecha_inicio_notificaciones
         AND (
              u.[forvisto] IS NULL
-          OR YEAR(u.[forvisto]) < 1950
-          OR DATEDIFF(SECOND, u.[forcuando], u.[forvisto]) BETWEEN 0 AND 5
+          OR u.[forvisto] < @fecha_inicio_notificaciones
         )
       ORDER BY u.[forcuando] DESC, f.[fornum] DESC;
     `);
@@ -526,29 +657,40 @@ async function getNotificacionesFormularios({ asenum }) {
 async function marcarNotificacionFormularioLeida({ asenum, fornum }) {
   const asesor = validarAsesor(asenum);
   const formulario = validarFormularioNumero(fornum);
+  const fechaInicioNotificaciones = getFechaInicioNotificaciones();
   const pool = await getPool();
 
   const result = await pool
     .request()
     .input("asenum", sql.Int, asesor)
     .input("fornum", sql.Int, formulario)
+    .input("fecha_inicio_notificaciones", sql.Date, fechaInicioNotificaciones)
     .query(`
-      ;WITH UltimaAccion AS (
-        SELECT TOP 1 f1.[fornum], f1.[forcuando], f1.[foraccion]
+      ;WITH NotificacionPendiente AS (
+        SELECT TOP 1
+              f1.[fornum]
+            , f1.[forcuando]
+            , f1.[foraccion]
         FROM [afapformularios].[dbo].[FORMULA1] f1 WITH (UPDLOCK, ROWLOCK)
         INNER JOIN [afapformularios].[dbo].[FORMULAR] f WITH (NOLOCK)
           ON f.[fornum] = f1.[fornum]
         WHERE f1.[fornum] = @fornum
           AND f.[forpromoto] = @asenum
+          AND UPPER(LTRIM(RTRIM(COALESCE(f1.[foraccion], '')))) <> 'ENV'
+          AND f1.[forcuando] >= @fecha_inicio_notificaciones
+          AND (
+               f1.[forvisto] IS NULL
+            OR f1.[forvisto] < @fecha_inicio_notificaciones
+          )
         ORDER BY f1.[forcuando] DESC
       )
       UPDATE f1
-      SET [forvisto] = GETDATE()
+      SET [forvisto] = SYSDATETIME()
       FROM [afapformularios].[dbo].[FORMULA1] f1
-      INNER JOIN UltimaAccion u
-        ON u.[fornum] = f1.[fornum]
-       AND u.[forcuando] = f1.[forcuando]
-      WHERE UPPER(LTRIM(RTRIM(COALESCE(u.[foraccion], '')))) <> 'ENV';
+      INNER JOIN NotificacionPendiente n
+        ON n.[fornum] = f1.[fornum]
+       AND n.[forcuando] = f1.[forcuando]
+       AND LTRIM(RTRIM(COALESCE(n.[foraccion], ''))) = LTRIM(RTRIM(COALESCE(f1.[foraccion], '')));
 
       SELECT @@ROWCOUNT AS [actualizados];
     `);

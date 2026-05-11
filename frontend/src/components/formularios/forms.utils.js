@@ -7,7 +7,7 @@ export const PERIODOS = [
   "30 días",
 ];
 
-export const ESTATUS = ["Todos", "En Proceso", "Activos", "Inactivos"];
+export const ESTATUS = ["Todos", "Ingresados a BPS", "En Proceso", "Inactivos / Rechazados"];
 
 export const LEYENDA = [
   { color: "#000000", label: "Anulado" },
@@ -403,7 +403,7 @@ export function resolveFormularioVisual(row) {
     estadoTxt: cleanText(row?.estadoTexto) || cleanText(row?.foraccion) || "Pendiente",
     estadoDetalle: cleanText(row?.estadoDetalle),
     color: cleanText(row?.estadoColor) || "#ffffff",
-    estatus: cleanText(row?.estadoFiltro) || "En Proceso",
+    estatus: cleanText(row?.estadoFiltro) || "Todos",
     borderColor: cleanText(row?.estadoBorde),
     permiteEditar: Boolean(row?.permiteEditar),
     permiteAnular: Boolean(row?.permiteAnular),

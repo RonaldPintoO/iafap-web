@@ -41,7 +41,7 @@ import FormulariosNotificacionesModal from "../components/formularios/Formulario
 
 export default function Formularios() {
   const [periodo, setPeriodo] = useState("30 días");
-  const [estatus, setEstatus] = useState("En Proceso");
+  const [estatus, setEstatus] = useState("Todos");
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
   const [showInfo, setShowInfo] = useState(false);
@@ -475,6 +475,11 @@ export default function Formularios() {
     try {
       setNotificacionSavingId(item.id);
       await marcarNotificacionFormularioLeida(item.id);
+
+      // Retiro la notificación localmente de inmediato para que la UI refleje la lectura,
+      // y luego sincronizo contra backend.
+      setNotificacionesRaw((prev) => prev.filter((noti) => String(noti.fornum || noti.id) !== String(item.id)));
+
       await reloadNotificaciones();
       await reloadFormularios();
     } catch (err) {

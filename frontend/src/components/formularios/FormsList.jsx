@@ -1,26 +1,5 @@
 export default function FormsList({ items, onItemClick, onAnularClick }) {
-  const estadoOrden = [
-    "Pendiente",
-    "ENV",
-    "REC",
-    "OK",
-    "BPS",
-    "BSA",
-    "OA",
-    "NOK",
-    "REP",
-  ];
-
-  const sortedItems = [...items].sort((a, b) => {
-    const estadoA = estadoOrden.indexOf(a.estadoTxt);
-    const estadoB = estadoOrden.indexOf(b.estadoTxt);
-
-    const ordenA = estadoA === -1 ? 999 : estadoA;
-    const ordenB = estadoB === -1 ? 999 : estadoB;
-
-    if (ordenA !== ordenB) return ordenA - ordenB;
-    return Number(a.id) - Number(b.id);
-  });
+  const sortedItems = Array.isArray(items) ? items : [];
 
   return (
     <div className="forms-list">
@@ -81,6 +60,7 @@ export default function FormsList({ items, onItemClick, onAnularClick }) {
 
                   <div className="forms-item__estado-wrap">
                     <div className="forms-item__estado">{it.estadoTxt}</div>
+
                     {it.estadoDetalle ? (
                       <div className="forms-item__estado-detalle">
                         {String(it.estadoDetalle)
@@ -91,6 +71,7 @@ export default function FormsList({ items, onItemClick, onAnularClick }) {
                           ))}
                       </div>
                     ) : null}
+
                     {it.permiteEditar ? (
                       <button
                         type="button"

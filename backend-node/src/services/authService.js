@@ -220,16 +220,14 @@ async function getAsesorSession(asenum) {
   return result.recordset?.[0] || null;
 }
 
-async function upsertAsesorSession({ asenum, token, lastActivityAt }) {
+async function upsertAsesorSession({ asenum, token }) {
   const code = normalizeAsenum(asenum);
   const pool = await getPool();
-  const activity = lastActivityAt ? new Date(lastActivityAt) : new Date();
 
   await pool
     .request()
     .input('asenum', sql.VarChar(10), code)
     .input('token', sql.VarChar(128), token)
-    .input('activityAt', sql.DateTime2, activity)
     .query(`
       MERGE dbo.WEBAPP_ASESORES_AUTH AS target
       USING (SELECT @asenum AS asenum) AS source
@@ -237,12 +235,12 @@ async function upsertAsesorSession({ asenum, token, lastActivityAt }) {
       WHEN MATCHED THEN
         UPDATE SET
           active_session_token = @token,
-          session_started_at = @activityAt,
-          last_activity_at = @activityAt,
+          session_started_at = SYSDATETIME(),
+          last_activity_at = SYSDATETIME(),
           updated_at = SYSDATETIME()
       WHEN NOT MATCHED THEN
         INSERT (asenum, active_session_token, session_started_at, last_activity_at, created_at, updated_at)
-        VALUES (@asenum, @token, @activityAt, @activityAt, SYSDATETIME(), SYSDATETIME());
+        VALUES (@asenum, @token, SYSDATETIME(), SYSDATETIME(), SYSDATETIME(), SYSDATETIME());
     `);
 }
 
@@ -260,6 +258,31 @@ async function clearAsesorSession(asenum) {
         last_activity_at = NULL,
         updated_at = SYSDATETIME()
       WHERE asenum = @asenum
+    `);
+}
+
+async function clearExpiredOrInvalidAsesorSession(asenum) {
+  const code = normalizeAsenum(asenum);
+  const pool = await getPool();
+
+  await pool
+    .request()
+    .input('asenum', sql.VarChar(10), code)
+    .input('inactivityMinutes', sql.Int, INACTIVITY_MINUTES)
+    .query(`
+      UPDATE dbo.WEBAPP_ASESORES_AUTH
+      SET
+        active_session_token = NULL,
+        session_started_at = NULL,
+        last_activity_at = NULL,
+        updated_at = SYSDATETIME()
+      WHERE asenum = @asenum
+        AND active_session_token IS NOT NULL
+        AND (
+          last_activity_at IS NULL
+          OR DATEDIFF(MINUTE, last_activity_at, SYSDATETIME()) >= @inactivityMinutes
+          OR last_activity_at > DATEADD(MINUTE, 1, SYSDATETIME())
+        )
     `);
 }
 
@@ -282,7 +305,8 @@ async function findSessionByToken(token) {
         a.updated_at,
         CASE
           WHEN a.last_activity_at IS NULL THEN 1
-          WHEN DATEADD(MINUTE, @inactivityMinutes, a.last_activity_at) <= SYSDATETIME() THEN 1
+          WHEN a.last_activity_at > DATEADD(MINUTE, 1, SYSDATETIME()) THEN 1
+          WHEN DATEDIFF(MINUTE, a.last_activity_at, SYSDATETIME()) >= @inactivityMinutes THEN 1
           ELSE 0
         END AS is_expired
       FROM dbo.WEBAPP_ASESORES_AUTH a
@@ -325,7 +349,8 @@ async function hasActiveSessionInSql(asenum) {
         CASE
           WHEN active_session_token IS NULL THEN 0
           WHEN last_activity_at IS NULL THEN 0
-          WHEN DATEADD(MINUTE, @inactivityMinutes, last_activity_at) > SYSDATETIME() THEN 1
+          WHEN last_activity_at > DATEADD(MINUTE, 1, SYSDATETIME()) THEN 0
+          WHEN DATEDIFF(MINUTE, last_activity_at, SYSDATETIME()) < @inactivityMinutes THEN 1
           ELSE 0
         END AS has_active_session
       FROM dbo.WEBAPP_ASESORES_AUTH
@@ -406,6 +431,7 @@ async function login({ asenum, reqMeta = {} }) {
   }
 
   await resetClientFailures(clientKey);
+  await clearExpiredOrInvalidAsesorSession(code);
 
   const currentSession = await getAsesorSession(code);
   if (currentSession?.active_session_token) {
@@ -431,7 +457,7 @@ async function login({ asenum, reqMeta = {} }) {
   }
 
   const token = buildToken();
-  await upsertAsesorSession({ asenum: code, token, lastActivityAt: new Date() });
+  await upsertAsesorSession({ asenum: code, token });
   await appendAuthLog({
     asenum: code,
     eventType: 'LOGIN_OK',
@@ -510,4 +536,5 @@ module.exports = {
   normalizeAsenum,
   INACTIVITY_MINUTES,
   getClientLockStatus,
+  clearExpiredOrInvalidAsesorSession,
 };

@@ -1,4 +1,8 @@
+import { useEffect, useMemo, useState } from "react";
+
 import { mapFormularioItem } from "./forms.utils";
+
+const PAGE_SIZE = 20;
 
 export default function FormulariosNotificacionesModal({
   show,
@@ -9,7 +13,17 @@ export default function FormulariosNotificacionesModal({
   onMarcarLeida,
   savingId = "",
 }) {
-  const notificaciones = items.map(mapFormularioItem);
+  const [page, setPage] = useState(1);
+
+  const notificaciones = useMemo(() => items.map(mapFormularioItem), [items]);
+
+  useEffect(() => {
+    if (show) setPage(1);
+  }, [show, items.length]);
+  const totalPages = Math.max(1, Math.ceil(notificaciones.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * PAGE_SIZE;
+  const visibleItems = notificaciones.slice(start, start + PAGE_SIZE);
 
   return (
     <div className={`forms-noti-backdrop ${show ? "is-open" : ""}`} onClick={onClose}>
@@ -32,31 +46,52 @@ export default function FormulariosNotificacionesModal({
           ) : notificaciones.length === 0 ? (
             <div className="forms-noti-empty">No hay respuestas finales pendientes de leer.</div>
           ) : (
-            notificaciones.map((it) => (
-              <article className="forms-noti-card" key={it.id}>
-                <div className="forms-noti-color" style={{ background: it.color, border: it.borderColor ? `1px solid ${it.borderColor}` : "none" }} />
-                <div className="forms-noti-content">
-                  <div className="forms-noti-title-row">
-                    <strong>Formulario {it.id}</strong>
-                    <span>{it.estadoTxt}</span>
-                  </div>
-                  <div className="forms-noti-meta">{it.fecha} {it.hora ? `- ${it.hora}` : ""}</div>
-                  {it.detalleFormulario ? <div className="forms-noti-line">{it.detalleFormulario}</div> : null}
-                  {it.proyectoTexto ? <div className="forms-noti-line">{it.proyectoTexto}</div> : null}
-                  {it.asesorTexto ? <div className="forms-noti-line">{it.asesorTexto}</div> : null}
-                  {it.estadoDetalle ? (
-                    <div className="forms-noti-detail">
-                      {String(it.estadoDetalle).split("\n").filter(Boolean).map((line) => <div key={line}>{line}</div>)}
+            <>
+              <div className="forms-noti-summary">
+                Mostrando {start + 1} a {Math.min(start + PAGE_SIZE, notificaciones.length)} de {notificaciones.length}
+              </div>
+
+              {visibleItems.map((it) => (
+                <article className="forms-noti-card" key={it.id}>
+                  <div
+                    className="forms-noti-color"
+                    style={{ background: it.color, border: it.borderColor ? `1px solid ${it.borderColor}` : "none" }}
+                  />
+                  <div className="forms-noti-content">
+                    <div className="forms-noti-title-row">
+                      <strong>Formulario {it.id}</strong>
+                      <span>{it.estadoTxt}</span>
                     </div>
-                  ) : null}
-                  <div className="forms-noti-actions">
-                    <button type="button" className="forms-noti-read-btn" disabled={savingId === it.id} onClick={() => onMarcarLeida?.(it)}>
-                      {savingId === it.id ? "Marcando..." : "Marcar como leída"}
-                    </button>
+                    <div className="forms-noti-meta">{it.fecha} {it.hora ? `- ${it.hora}` : ""}</div>
+                    {it.detalleFormulario ? <div className="forms-noti-line">{it.detalleFormulario}</div> : null}
+                    {it.proyectoTexto ? <div className="forms-noti-line">{it.proyectoTexto}</div> : null}
+                    {it.asesorTexto ? <div className="forms-noti-line">{it.asesorTexto}</div> : null}
+                    {it.estadoDetalle ? (
+                      <div className="forms-noti-detail">
+                        {String(it.estadoDetalle).split("\n").filter(Boolean).map((line) => <div key={line}>{line}</div>)}
+                      </div>
+                    ) : null}
+                    <div className="forms-noti-actions">
+                      <button type="button" className="forms-noti-read-btn" disabled={savingId === it.id} onClick={() => onMarcarLeida?.(it)}>
+                        {savingId === it.id ? "Marcando..." : "Marcar como leída"}
+                      </button>
+                    </div>
                   </div>
+                </article>
+              ))}
+
+              {totalPages > 1 ? (
+                <div className="forms-noti-pagination">
+                  <button type="button" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                    Anterior
+                  </button>
+                  <span>Página {safePage} de {totalPages}</span>
+                  <button type="button" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                    Siguiente
+                  </button>
                 </div>
-              </article>
-            ))
+              ) : null}
+            </>
           )}
         </div>
       </div>
