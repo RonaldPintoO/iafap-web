@@ -7,16 +7,18 @@ export default function AnalysisTabs({ tab, setTab }) {
         <div key={item.id} className="analysis-tabs__item">
           <button
             type="button"
-            className={`analysis-tab ${tab === item.id ? "is-active" : ""}`}
+            className={[
+              "analysis-tab",
+              tab === item.id ? "is-active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             onClick={() => setTab(item.id)}
           >
             {item.label}
             {tab === item.id && <div className="analysis-tab__active-bar" />}
           </button>
-
-          {index < ANALYSIS_TABS.length - 1 && (
-            <div className="analysis-tab__divider" />
-          )}
+          {index < ANALYSIS_TABS.length - 1 && <div className="analysis-tab__divider" />}
         </div>
       ))}
     </div>

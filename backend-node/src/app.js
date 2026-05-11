@@ -7,8 +7,10 @@ const mapaRoutes = require("./routes/mapa.routes");
 const personasRoutes = require("./routes/personas.routes");
 const soloCedulaRoutes = require("./routes/soloCedula.routes");
 const authRoutes = require("./routes/auth.routes");
-const requireAuth = require("./middleware/requireAuth");
+const analisisRoutes = require("./routes/analisis.routes");
+const estadisticasRoutes = require("./routes/estadisticas.routes");
 const formulariosRoutes = require("./routes/formularios.routes");
+const requireAuth = require("./middleware/requireAuth");
 
 const app = express();
 
@@ -48,6 +50,8 @@ app.use("/auth", authRoutes);
 app.use("/configuracion/asesores", requireAuth, configuracionRoutes);
 app.use("/mapa", requireAuth, mapaRoutes);
 app.use("/personas", requireAuth, personasRoutes);
+app.use("/analisis", requireAuth, analisisRoutes);
+app.use("/estadisticas", requireAuth, estadisticasRoutes);
 app.use("/solo-cedula", requireAuth, soloCedulaRoutes);
 app.use("/formularios", requireAuth, formulariosRoutes);
 
